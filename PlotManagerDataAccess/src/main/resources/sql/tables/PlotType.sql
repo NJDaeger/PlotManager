@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS PlotType
+(
+    id int NOT NULL AUTO_INCREMENT,
+    name varchar(255) NOT NULL,
+    created datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT PlotType_pk PRIMARY KEY (id),
+    CONSTRAINT PlotType_name_uq UNIQUE (name)
+)

@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS User
+(
+    id int NOT NULL AUTO_INCREMENT,
+    uuid char(36) NOT NULL,
+    username varchar(16) NOT NULL,
+    created datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT User_pk PRIMARY KEY (id),
+    CONSTRAINT User_uuid_uq UNIQUE (uuid)
+)
