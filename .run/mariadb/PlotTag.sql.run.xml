@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="PlotTag.sql" type="DatabaseScript" editBeforeRun="true" nameIsGenerated="true">
+    <script-file value="$PROJECT_DIR$/PlotManagerDataAccess/src/main/resources/sql/mariadb/tables/PlotTag.sql" />
+    <script-mode>FILE</script-mode>
+    <data-source id="e34707d0-6b02-4934-b18a-9ebb4e269594" namespace="schema/&quot;s1_plotmanager_dev&quot;" />
+    <method v="2" />
+  </configuration>
+</component>
