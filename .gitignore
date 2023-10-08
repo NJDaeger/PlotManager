@@ -7,6 +7,7 @@
 
 # IntelliJ
 out/
+jars/
 
 # Compiled class file
 *.class
