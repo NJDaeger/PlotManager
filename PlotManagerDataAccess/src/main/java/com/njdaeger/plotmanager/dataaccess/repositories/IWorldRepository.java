@@ -2,6 +2,7 @@ package com.njdaeger.plotmanager.dataaccess.repositories;
 
 import com.njdaeger.plotmanager.dataaccess.IRepository;
 import com.njdaeger.plotmanager.dataaccess.models.PlotWorldEntity;
+import org.bukkit.World;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,23 +32,29 @@ public interface IWorldRepository extends IRepository {
 
     /**
      * Insert a world into the database.
-     * @param world The world to insert.
-     * @return True if the world was inserted, false otherwise.
+     * @param createdBy The id of the user who created this world.
+     * @param worldId The uuid of the world.
+     * @param worldName The name of the world.
+     * @return The newly created world, or null if the world could not be created.
      */
-    CompletableFuture<Boolean> insertWorld(PlotWorldEntity world);
+    CompletableFuture<PlotWorldEntity> insertWorld(int createdBy, UUID worldId, String worldName);
 
     /**
      * Update a world in the database.
-     * @param world The world to update.
-     * @return True if the world was updated, false otherwise.
+     * @param modifiedBy The id of the user who modified this world.
+     * @param worldId The id of the world to update
+     * @param newUuid The new uuid of the world, or null to not update the uuid.
+     * @param newWorldName The new name of the world, or null to not update the name.
+     * @return The updated world, or null if the world could not be updated.
      */
-    CompletableFuture<Boolean> updateWorld(PlotWorldEntity world);
+    CompletableFuture<PlotWorldEntity> updateWorld(int modifiedBy, int worldId, UUID newUuid, String newWorldName);
 
     /**
      * Delete a world from the database.
+     * @param deletedBy The id of the user who deleted this world.
      * @param worldId The world to delete.
-     * @return True if the world was deleted, false otherwise.
+     * @return The id of the deleted world, or -1 if the world could not be deleted.
      */
-    CompletableFuture<Boolean> deleteWorld(int worldId);
+    CompletableFuture<Integer> deleteWorld(int deletedBy, int worldId);
 
 }

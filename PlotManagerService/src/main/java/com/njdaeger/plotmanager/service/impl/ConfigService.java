@@ -11,7 +11,8 @@ public class ConfigService extends Configuration implements IConfigService {
     public ConfigService(Plugin plugin) {
         super(plugin, ConfigType.YML, "config");
 
-        addEntry("database.type", DatabaseType.MARIADB.name());
+        addEntry("write-exceptions-to-file", true);
+        addEntry("database.type", DatabaseType.MYSQL.name());
         addEntry("database.credentials.host", "localhost");
         addEntry("database.credentials.port", 3306);
         addEntry("database.credentials.name", "databasename");

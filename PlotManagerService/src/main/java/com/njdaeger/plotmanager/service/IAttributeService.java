@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public interface IAttributeService {
+public interface IAttributeService extends ITransactionalService {
 
     /**
      * Get all attributes
-     * @return A result with a list of attributes if successful, or a result with null if the attribute retrieval was unsuccessful.
+     * @return A result with a list of attributes if successful, or a result with an empty list if the attribute retrieval was unsuccessful.
      */
     CompletableFuture<Result<List<Attribute>>> getAttributes();
 

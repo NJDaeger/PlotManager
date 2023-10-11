@@ -54,8 +54,24 @@ public class Result<T> {
         return successful ? result : other;
     }
 
+    /**
+     * Get the result or a default value.
+     * @param map The function to map the result to.
+     * @param other The default value.
+     * @param <R> The type of the result.
+     * @return The result or the default value.
+     */
     public <R> R getOr(Function<T, R> map, R other) {
         return successful ? map.apply(result) : other;
+    }
+
+    /**
+     * Get the result or throw an exception.
+     * @return The result.
+     */
+    public T getOrThrow() {
+        if (successful) return result;
+        throw new RuntimeException(message);
     }
 
     /**

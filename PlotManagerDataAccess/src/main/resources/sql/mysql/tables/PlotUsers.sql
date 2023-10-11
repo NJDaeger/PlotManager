@@ -2,13 +2,13 @@ CREATE TABLE IF NOT EXISTS PlotUsers
 (
     plotId int NOT NULL,
     userId int NOT NULL,
-    userRole int NOT NULL,
-    created bigint NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created bigint NOT NULL DEFAULT unix_timestamp(),
     createdBy int NOT NULL,
-    modified bigint NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    modified bigint NULL,
+    modifiedBy int NULL,
     CONSTRAINT PlotUsers_plotId_userId_uc UNIQUE (plotId, userId),
     CONSTRAINT PlotUsers_plotId_fk FOREIGN KEY (plotId) REFERENCES Plot (id),
     CONSTRAINT PlotUsers_userId_fk FOREIGN KEY (userId) REFERENCES User (id),
-    CONSTRAINT PlotUsers_userRole_fk FOREIGN KEY (userRole) REFERENCES UserRole (id),
-    CONSTRAINT PlotUsers_createdBy_fk FOREIGN KEY (createdBy) REFERENCES User (id)
+    CONSTRAINT PlotUsers_createdBy_fk FOREIGN KEY (createdBy) REFERENCES User (id),
+    CONSTRAINT PlotUsers_modifiedBy_fk FOREIGN KEY (modifiedBy) REFERENCES User (id)
 )

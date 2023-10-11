@@ -2,8 +2,8 @@ package com.njdaeger.plotmanager.dataaccess.repositories.impl;
 
 import com.njdaeger.exceptionpublisher.IExceptionPublisher;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
-import com.njdaeger.plotmanager.dataaccess.models.UserEntity;
-import com.njdaeger.plotmanager.dataaccess.repositories.IUserRepository;
+import com.njdaeger.plotmanager.dataaccess.models.PlotWorldEntity;
+import com.njdaeger.plotmanager.dataaccess.repositories.IWorldRepository;
 import com.njdaeger.plotmanager.dataaccess.transactional.ITransaction;
 
 import java.util.List;
@@ -12,13 +12,13 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.njdaeger.plotmanager.dataaccess.Util.await;
 
-public class UserRepository implements IUserRepository {
+public class WorldRepository implements IWorldRepository {
 
     private final IExceptionPublisher exceptionPublisher;
     private final ITransaction<?> transaction;
     private final IProcedure procedures;
 
-    public UserRepository(IExceptionPublisher exceptionPublisher, IProcedure procedures, ITransaction<?> transaction) {
+    public WorldRepository(IExceptionPublisher exceptionPublisher, IProcedure procedures, ITransaction<?> transaction) {
         this.exceptionPublisher = exceptionPublisher;
         this.transaction = transaction;
         this.procedures = procedures;
@@ -31,11 +31,11 @@ public class UserRepository implements IUserRepository {
     }
 
     @Override
-    public CompletableFuture<List<UserEntity>> getUsers() {
+    public CompletableFuture<List<PlotWorldEntity>> getWorlds() {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.selectUsers();
-                return transaction.query(proc.getFirst(), UserEntity.class);
+                var proc = procedures.selectWorlds();
+                return transaction.query(proc.getFirst(), PlotWorldEntity.class);
             } catch (Exception e) {
                 exceptionPublisher.publishException(e);
                 return List.of();
@@ -44,11 +44,11 @@ public class UserRepository implements IUserRepository {
     }
 
     @Override
-    public CompletableFuture<UserEntity> getUserById(int id) {
+    public CompletableFuture<PlotWorldEntity> getWorldById(int id) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.selectUserById(id);
-                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), UserEntity.class);
+                var proc = procedures.selectWorldById(id);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotWorldEntity.class);
             } catch (Exception e) {
                 exceptionPublisher.publishException(e);
                 return null;
@@ -57,11 +57,11 @@ public class UserRepository implements IUserRepository {
     }
 
     @Override
-    public CompletableFuture<UserEntity> getUserByUuid(UUID uuid) {
+    public CompletableFuture<PlotWorldEntity> getWorldByUuid(UUID uuid) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.selectUserByUuid(uuid);
-                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), UserEntity.class);
+                var proc = procedures.selectWorldByUuid(uuid);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotWorldEntity.class);
             } catch (Exception e) {
                 exceptionPublisher.publishException(e);
                 return null;
@@ -70,26 +70,13 @@ public class UserRepository implements IUserRepository {
     }
 
     @Override
-    public CompletableFuture<List<UserEntity>> getUsersByUsername(String username) {
+    public CompletableFuture<PlotWorldEntity> insertWorld(int createdBy, UUID worldId, String worldName) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.selectUsersByUsername(username);
-                return transaction.query(proc.getFirst(), UserEntity.class);
-            } catch (Exception e) {
-                exceptionPublisher.publishException(e);
-                return List.of();
-            }
-        });
-    }
-
-    @Override
-    public CompletableFuture<UserEntity> insertUser(int createdBy, UUID userId, String username) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                var proc = procedures.insertUser(createdBy, userId, username);
+                var proc = procedures.insertWorld(createdBy, worldId, worldName);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
                 if (id == -1) return null;
-                return await(getUserById(id));
+                return await(getWorldById(id));
             } catch (Exception e) {
                 exceptionPublisher.publishException(e);
                 return null;
@@ -98,13 +85,13 @@ public class UserRepository implements IUserRepository {
     }
 
     @Override
-    public CompletableFuture<UserEntity> updateUser(int modifiedBy, int userId, UUID userUniqueId, String username) {
+    public CompletableFuture<PlotWorldEntity> updateWorld(int modifiedBy, int worldId, UUID newUuid, String newWorldName) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.updateUser(modifiedBy, userId, userUniqueId, username);
+                var proc = procedures.updateWorld(modifiedBy, worldId, newUuid, newWorldName);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
                 if (id == -1) return null;
-                return await(getUserById(id));
+                return await(getWorldById(id));
             } catch (Exception e) {
                 exceptionPublisher.publishException(e);
                 return null;
@@ -113,10 +100,10 @@ public class UserRepository implements IUserRepository {
     }
 
     @Override
-    public CompletableFuture<Integer> deleteUser(int deletedBy, int userId) {
+    public CompletableFuture<Integer> deleteWorld(int deletedBy, int worldId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.deleteUser(deletedBy, userId);
+                var proc = procedures.deleteWorld(deletedBy, worldId);
                 return transaction.execute(proc.getFirst(), proc.getSecond());
             } catch (Exception e) {
                 exceptionPublisher.publishException(e);

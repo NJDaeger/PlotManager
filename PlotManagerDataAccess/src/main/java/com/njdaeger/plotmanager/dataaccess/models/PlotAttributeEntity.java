@@ -7,6 +7,8 @@ public class PlotAttributeEntity implements Identifiable {
     @Column
     private int id;
     @Column
+    private int plotId;
+    @Column
     private int attributeId;
     @Column
     private String value;
@@ -37,6 +39,10 @@ public class PlotAttributeEntity implements Identifiable {
 
     public int getAttribute() {
         return attributeId;
+    }
+
+    public int getPlot() {
+        return plotId;
     }
 
     public String getValue() {

@@ -94,6 +94,7 @@ public class ServiceProviderBuilder {
      */
     private Map<Class<?>, Function<IServiceProvider, ?>> orderTransientsInLoadOrder() {
         var merged = new HashSet<>(singletons.keySet());
+        merged.addAll(transients.keySet());
         var ordered = new HashMap<Class<?>, Function<IServiceProvider, ?>>();
         var toLoad = new Stack<Class<?>>();
         toLoad.addAll(transients.keySet());
@@ -112,10 +113,9 @@ public class ServiceProviderBuilder {
 
             if (params.length == 0 || canBeLoaded(params, merged)) {
                 ordered.put(intf, pair.getSecond());
-                merged.add(intf);
             } else {
                 //if we were unable to be loaded with currently loaded classes, check if we can be loaded AT ALL. Checking the transient classes here can show if we are missing a scoped dependency.
-                if (!canBeLoaded(params, transients.keySet())) throw new RuntimeException("Cannot instantiate " + impl.getSimpleName() + " because there are missing scoped dependencies. Unable to find " + Stream.of(params).map(Parameter::getType).filter(type -> !transients.containsKey(type)).map(Class::getSimpleName).reduce((s1, s2) -> s1 + ", " + s2).orElse("no dependencies") + ".");
+                if (!canBeLoaded(params, transients.keySet())) throw new RuntimeException("Cannot instantiate " + impl.getSimpleName() + " because there are missing transient dependencies. Unable to find " + Stream.of(params).map(Parameter::getType).filter(type -> !transients.containsKey(type)).map(Class::getSimpleName).reduce((s1, s2) -> s1 + ", " + s2).orElse("no dependencies") + ".");
                 //if we have already tried to load this class and STILL failed, then we have a circular dependency.
                 if (recursiveIndicator == intf) throw new RuntimeException("Cannot instantiate " + impl.getSimpleName() + " because it has a circular dependency.");
                 toLoad.add(0, intf);
@@ -191,6 +191,7 @@ public class ServiceProviderBuilder {
             try {
                 return (S) constructor.newInstance(args);
             } catch (Exception e) {
+                e.printStackTrace();
                 throw new RuntimeException("Failed to instantiate " + serviceImplementation.getSimpleName() + " because of an exception.", e);
             }
         };

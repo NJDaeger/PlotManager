@@ -3,7 +3,7 @@ package com.njdaeger.plotmanager.service;
 import com.njdaeger.plotmanager.service.models.Plot;
 import org.bukkit.Location;
 
-public interface IPlotService {
+public interface IPlotService extends ITransactionalService {
 
     /**
      * Creates a draft plot at the given location. no attributes are assigned to this plot, no people can be assigned to this plot

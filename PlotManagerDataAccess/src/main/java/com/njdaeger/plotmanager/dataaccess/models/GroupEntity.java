@@ -2,7 +2,7 @@ package com.njdaeger.plotmanager.dataaccess.models;
 
 import com.njdaeger.plotmanager.dataaccess.Identifiable;
 
-public class PlotGroupEntity implements Identifiable {
+public class GroupEntity implements Identifiable {
 
     @Column
     private int id;
@@ -21,7 +21,7 @@ public class PlotGroupEntity implements Identifiable {
     @Column
     private Long modified;
 
-    public PlotGroupEntity() {}
+    public GroupEntity() {}
 
     @Override
     public int getId() {

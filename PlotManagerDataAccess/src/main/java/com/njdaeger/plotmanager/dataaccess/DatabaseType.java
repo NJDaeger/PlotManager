@@ -2,7 +2,7 @@ package com.njdaeger.plotmanager.dataaccess;
 
 public enum DatabaseType {
 
-    MARIADB("MariaDb", "com.njdaeger.plotmanager.dataaccess.impl.mariadb.MariaDbDatabase", true, true),
+    MYSQL("MySql", "com.njdaeger.plotmanager.dataaccess.impl.mysql.MySqlDatabase", true, true),
     YML("Yml", "com.njdaeger.plotmanager.dataaccess.impl.yml.YmlDatabase", false, false);
 
     private final String name;

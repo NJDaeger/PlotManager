@@ -39,7 +39,7 @@
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
                 <includes>
-                    <include>sql/*</include>
+                    <include>**/*.sql</include>
                 </includes>
             </resource>
         </resources>

@@ -6,7 +6,7 @@
     <method v="2">
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="PermissionGroup.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="Plot.sql" run_configuration_type="DatabaseScript" />
-      <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotGroup.sql" run_configuration_type="DatabaseScript" />
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Group.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotGroups.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotPermission.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotStatus.sql" run_configuration_type="DatabaseScript" />
@@ -14,7 +14,7 @@
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotTags.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotType.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotUsers.sql" run_configuration_type="DatabaseScript" />
-      <option name="RunConfigurationTask" enabled="true" run_configuration_name="PlotWorld.sql" run_configuration_type="DatabaseScript" />
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="World.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="SchemaVersion.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="User.sql" run_configuration_type="DatabaseScript" />
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="UserRole.sql" run_configuration_type="DatabaseScript" />

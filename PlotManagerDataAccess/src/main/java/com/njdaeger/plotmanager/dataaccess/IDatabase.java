@@ -21,6 +21,12 @@ public interface IDatabase<T extends ITransaction<T2>, T2> {
     void createDatabases();
 
     /**
+     * Check if the database has successfully loaded
+     * @return True if the database has loaded, false otherwise.
+     */
+    boolean isLoaded();
+
+    /**
      * Get the type of database.
      * @return The type of database.
      */

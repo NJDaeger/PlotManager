@@ -2,13 +2,14 @@ package com.njdaeger.plotmanager.dataaccess.repositories.impl;
 
 import com.njdaeger.plotmanager.dataaccess.models.PlotAttributeEntity;
 import com.njdaeger.plotmanager.dataaccess.models.PlotEntity;
-import com.njdaeger.plotmanager.dataaccess.models.PlotGroupEntity;
+import com.njdaeger.plotmanager.dataaccess.models.GroupEntity;
 import com.njdaeger.plotmanager.dataaccess.repositories.IPlotRepository;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class PlotRepositoryImpl implements IPlotRepository {
+public class PlotRepository implements IPlotRepository {
+
     @Override
     public CompletableFuture<Boolean> initializeRepository() {
         return null;
@@ -25,17 +26,17 @@ public class PlotRepositoryImpl implements IPlotRepository {
     }
 
     @Override
-    public CompletableFuture<Integer> insertPlot(PlotEntity plot) {
+    public CompletableFuture<PlotEntity> insertPlot(int createdBy, int worldId, int x, int y, int z) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Integer> updatePlot(PlotEntity plot) {
+    public CompletableFuture<PlotEntity> updatePlot(int updatedBy, int plotId, Integer newWorldId, Integer newX, Integer newY, Integer newZ) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Integer> deletePlot(int plotId) {
+    public CompletableFuture<Integer> deletePlot(int deletedBy, int plotId) {
         return null;
     }
 
@@ -50,42 +51,42 @@ public class PlotRepositoryImpl implements IPlotRepository {
     }
 
     @Override
-    public CompletableFuture<Integer> insertPlotAttributeForPlot(int plotId, PlotAttributeEntity attribute) {
+    public CompletableFuture<PlotAttributeEntity> insertPlotAttribute(int createdBy, int plotId, int attributeId, String value) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Integer> updatePlotAttributeForPlot(int plotId, PlotAttributeEntity attribute) {
+    public CompletableFuture<PlotAttributeEntity> updatePlotAttribute(int updatedBy, int plotId, Integer attributeId, String value) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Integer> deletePlotAttributeForPlot(int plotId, int attributeId) {
+    public CompletableFuture<Integer> deletePlotAttribute(int deletedBy, int plotId, int attributeId) {
         return null;
     }
 
     @Override
-    public CompletableFuture<List<PlotGroupEntity>> getPlotGroups() {
+    public CompletableFuture<List<GroupEntity>> getPlotGroups() {
         return null;
     }
 
     @Override
-    public CompletableFuture<PlotGroupEntity> getPlotGroupById(int plotGroupId) {
+    public CompletableFuture<GroupEntity> getPlotGroupById(int plotGroupId) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Integer> insertPlotGroup(PlotGroupEntity plotGroup) {
+    public CompletableFuture<GroupEntity> insertPlotGroup(int createdBy, String groupName) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Integer> updatePlotGroup(PlotGroupEntity plotGroup) {
+    public CompletableFuture<GroupEntity> updatePlotGroup(int updatedBy, int plotGroupid, String newPlotGroupName) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Integer> deletePlotGroup(int plotGroupId) {
+    public CompletableFuture<Integer> deletePlotGroup(int deletedBy, int plotGroupId) {
         return null;
     }
 }

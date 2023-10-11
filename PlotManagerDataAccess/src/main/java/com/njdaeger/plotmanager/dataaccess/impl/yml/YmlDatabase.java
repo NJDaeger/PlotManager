@@ -38,6 +38,11 @@ public class YmlDatabase implements IDatabase {
     }
 
     @Override
+    public boolean isLoaded() {
+        return false;
+    }
+
+    @Override
     public DatabaseType getType() {
         return DatabaseType.YML;
     }

@@ -21,7 +21,11 @@ public class ServiceProvider implements IServiceProvider {
         this.singletons = new HashMap<>();
         this.generatorFunctions = generatorFunctions;
         this.plugin = plugin;
-        var singletonLoadStack = new Stack<Pair<Class<?>, Function<IServiceProvider, ?>>>();
+        loadSingletons(singletons);
+    }
+
+    private void loadSingletons(Stack<Pair<Class<?>, Function<IServiceProvider, ?>>> singletons) {
+        var retryStack = new Stack<Pair<Class<?>, Function<IServiceProvider, ?>>>();
         singletons.forEach((pair) -> {
             var intf = pair.getFirst();
             var init = pair.getSecond();
@@ -31,21 +35,14 @@ public class ServiceProvider implements IServiceProvider {
                 this.singletons.put(intf, obj);
             } catch (Exception e) {
                 System.out.println("Failed to initialize singleton " + intf.getSimpleName() + " because it tried to grab a service that has not been loaded.");
-                singletonLoadStack.add(0, pair);
+                retryStack.add(0, pair);
             }
         });
-        //this can happen if, lets say, an alias was registered for the same singleton.
-        //the IConfig.class and IConfigService may reference the same implementation
-        while (!singletonLoadStack.isEmpty()) {
-            var pair = singletonLoadStack.pop();
-            var intf = pair.getFirst();
-            var init = pair.getSecond();
-            try {
-                var obj = init.apply(this);
-                this.singletons.put(intf, obj);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to initialize singleton " + intf.getSimpleName() + " because it tried to grab a service that has not been loaded.", e);
+        if (retryStack.size() > 0) {
+            if (retryStack.size() == singletons.size()) {
+                throw new RuntimeException("Failed to initialize singletons because they all tried to grab a service that has not been loaded.");
             }
+            loadSingletons(retryStack);
         }
     }
 
