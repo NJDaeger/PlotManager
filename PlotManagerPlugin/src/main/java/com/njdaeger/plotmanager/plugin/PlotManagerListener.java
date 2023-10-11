@@ -1,8 +1,8 @@
 package com.njdaeger.plotmanager.plugin;
 
-import com.njdaeger.exceptionpublisher.IExceptionPublisher;
-import com.njdaeger.plotmanager.service.IServiceTransaction;
-import com.njdaeger.plotmanager.service.IUserService;
+import com.njdaeger.pluginlogger.IPluginLogger;
+import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
+import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
 import com.njdaeger.serviceprovider.IServiceProvider;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,12 +13,12 @@ import static com.njdaeger.plotmanager.dataaccess.Util.await;
 public class PlotManagerListener implements Listener {
 
     private final IServiceProvider provider;
-    private final IExceptionPublisher publisher;
+    private final IPluginLogger logger;
     private final IPlotManagerPlugin plugin;
 
-    public PlotManagerListener(IPlotManagerPlugin plugin, IExceptionPublisher publisher, IServiceProvider provider) {
+    public PlotManagerListener(IPlotManagerPlugin plugin, IPluginLogger logger, IServiceProvider provider) {
         this.provider = provider;
-        this.publisher = publisher;
+        this.logger = logger;
         this.plugin = plugin;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -38,12 +38,12 @@ public class PlotManagerListener implements Listener {
                 }
             } else {
                 userService.createUser(system.getUserId(), e.getPlayer().getUniqueId(), e.getPlayer().getName()).whenCompleteAsync((r, t) -> {
-                    if (t != null) publisher.publishException(new RuntimeException(t));
+                    if (t != null) logger.exception(new RuntimeException(t));
                     else  plugin.getLogger().info("Created user " + e.getPlayer().getUniqueId() + " with id " + r.getOrThrow().getUserId());
                 });
             }
         } catch (Exception ex) {
-            publisher.publishException(ex);
+            logger.exception(ex);
         }
     }
 }

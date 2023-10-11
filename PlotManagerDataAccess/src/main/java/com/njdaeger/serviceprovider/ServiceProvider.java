@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class ServiceProvider implements IServiceProvider {
@@ -18,8 +19,8 @@ public class ServiceProvider implements IServiceProvider {
     private final Map<Class<?>, Function<IServiceProvider, ?>> generatorFunctions;
 
     public ServiceProvider(Plugin plugin, Stack<Pair<Class<?>, Function<IServiceProvider, ?>>> singletons, Map<Class<?>, Function<IServiceProvider, ?>> generatorFunctions) {
-        this.singletons = new HashMap<>();
-        this.generatorFunctions = generatorFunctions;
+        this.singletons = new ConcurrentHashMap<>();
+        this.generatorFunctions = new ConcurrentHashMap<>(generatorFunctions);
         this.plugin = plugin;
         loadSingletons(singletons);
     }
@@ -29,12 +30,10 @@ public class ServiceProvider implements IServiceProvider {
         singletons.forEach((pair) -> {
             var intf = pair.getFirst();
             var init = pair.getSecond();
-            System.out.println("Loading singleton " + intf.getSimpleName() + "...");
             try {
                 var obj = init.apply(this);
                 this.singletons.put(intf, obj);
             } catch (Exception e) {
-                System.out.println("Failed to initialize singleton " + intf.getSimpleName() + " because it tried to grab a service that has not been loaded.");
                 retryStack.add(0, pair);
             }
         });

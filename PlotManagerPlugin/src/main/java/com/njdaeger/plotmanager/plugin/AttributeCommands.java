@@ -3,7 +3,7 @@ package com.njdaeger.plotmanager.plugin;
 import com.njdaeger.pdk.command.CommandBuilder;
 import com.njdaeger.pdk.command.CommandContext;
 import com.njdaeger.pdk.command.exception.PDKCommandException;
-import com.njdaeger.plotmanager.service.IConfigService;
+import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
 import com.njdaeger.serviceprovider.IServiceProvider;
 
 public class AttributeCommands {

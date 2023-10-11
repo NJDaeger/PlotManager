@@ -18,7 +18,7 @@ public interface IDatabase<T extends ITransaction<T2>, T2> {
     /**
      * Create a database.
      */
-    void createDatabases();
+    void initializeDatabase();
 
     /**
      * Check if the database has successfully loaded

@@ -1,25 +1,22 @@
 package com.njdaeger.plotmanager.plugin;
 
-import com.njdaeger.exceptionpublisher.ExceptionPublisher;
-import com.njdaeger.exceptionpublisher.IExceptionPublisher;
+import com.njdaeger.pluginlogger.PluginLogger;
+import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.pdk.config.IConfig;
 import com.njdaeger.plotmanager.dataaccess.DatabaseType;
 import com.njdaeger.plotmanager.dataaccess.IDatabase;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
-import com.njdaeger.plotmanager.dataaccess.impl.mysql.MySqlDatabase;
-import com.njdaeger.plotmanager.dataaccess.impl.mysql.MySqlProcedures;
-import com.njdaeger.plotmanager.dataaccess.impl.yml.YmlDatabase;
+import com.njdaeger.plotmanager.dataaccess.databases.mysql.MySqlDatabase;
+import com.njdaeger.plotmanager.dataaccess.databases.mysql.MySqlProcedures;
+import com.njdaeger.plotmanager.dataaccess.databases.yml.YmlDatabase;
 import com.njdaeger.plotmanager.dataaccess.transactional.IUnitOfWork;
 import com.njdaeger.plotmanager.dataaccess.transactional.UnitOfWork;
-import com.njdaeger.plotmanager.service.IAttributeService;
-import com.njdaeger.plotmanager.service.IConfigService;
-import com.njdaeger.plotmanager.service.IServiceTransaction;
-import com.njdaeger.plotmanager.service.IUserService;
-import com.njdaeger.plotmanager.service.IWorldService;
-import com.njdaeger.plotmanager.service.ServiceTransaction;
-import com.njdaeger.plotmanager.service.impl.AttributeService;
-import com.njdaeger.plotmanager.service.impl.ConfigService;
-import com.njdaeger.plotmanager.service.impl.UserService;
+import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
+import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
+import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
+import com.njdaeger.plotmanager.servicelibrary.services.IWorldService;
+import com.njdaeger.plotmanager.servicelibrary.transactional.ServiceTransaction;
+import com.njdaeger.plotmanager.servicelibrary.services.implementations.ConfigService;
 import com.njdaeger.serviceprovider.IServiceProvider;
 import com.njdaeger.serviceprovider.ServiceProviderBuilder;
 import org.bukkit.Bukkit;
@@ -38,7 +35,7 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
                 .addSingleton(IPlotManagerPlugin.class, (sp) -> this)
                 .addSingleton(IConfigService.class, ConfigService.class)
                 .addSingleton(IConfig.class, (sp) -> sp.getRequiredService(IConfigService.class))
-                .addSingleton(IExceptionPublisher.class, ExceptionPublisher.class)
+                .addSingleton(IPluginLogger.class, PluginLogger.class)
                 .addSingleton(IProcedure.class, (sp) -> {
                     var type = sp.getRequiredService(IConfigService.class).getDatabaseType();
                     if (type == null) throw new RuntimeException("Database type is null.");
@@ -57,7 +54,7 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
                 .addTransient(IUnitOfWork.class, UnitOfWork.class)
                 .build(this);
 
-        serviceProvider.getRequiredService(IDatabase.class).createDatabases();
+        serviceProvider.getRequiredService(IDatabase.class).initializeDatabase();
 
         serviceProvider.initialize(AttributeCommands.class);
         serviceProvider.initialize(PlotManagerListener.class);
@@ -67,7 +64,11 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
 
     @Override
     public void onDisable() {
-        super.onDisable();
+        try {
+            serviceProvider.getRequiredService(IPluginLogger.class).close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -96,7 +97,7 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
             })));
 
         } catch (Exception e) {
-            serviceProvider.getRequiredService(IExceptionPublisher.class).publishException(e);
+            serviceProvider.getRequiredService(IPluginLogger.class).exception(e);
         }
         getLogger().info("World loading complete!");
     }
