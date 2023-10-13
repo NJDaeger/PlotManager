@@ -7,8 +7,15 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.invoke.MethodHandle;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
+
+import static java.util.logging.LogManager.getLogManager;
 
 public class PluginLogger implements IPluginLogger {
 
@@ -22,6 +29,10 @@ public class PluginLogger implements IPluginLogger {
     public PluginLogger(Plugin plugin, IConfig config) {
         this.plugin = plugin;
         this.config = config;
+        plugin.getLogger().setLevel(Level.FINE);
+        var pmLogger = LogManager.getLogManager().getLogger("PlotManager");
+        pmLogger.setLevel(Level.FINE);
+        pmLogger.getParent().getHandlers()[0].setLevel(Level.FINE);
     }
 
     @Override
@@ -50,7 +61,7 @@ public class PluginLogger implements IPluginLogger {
 
     @Override
     public void warning(String message, String... additionalInfo) {
-        plugin.getLogger().warning(message);
+        plugin.getLogger().warning("[" + getCallerClassName() + "] " + message);
         for (String info : additionalInfo) {
             plugin.getLogger().warning(info);
         }
@@ -58,12 +69,12 @@ public class PluginLogger implements IPluginLogger {
 
     @Override
     public void warning(String message) {
-        plugin.getLogger().warning(message);
+        plugin.getLogger().warning("[" + getCallerClassName() + "] " + message);
     }
 
     @Override
     public void info(String message, String... additionalInfo) {
-        plugin.getLogger().info(message);
+        plugin.getLogger().info("[" + getCallerClassName() + "] " + message);
         for (String info : additionalInfo) {
             plugin.getLogger().info(info);
         }
@@ -71,13 +82,13 @@ public class PluginLogger implements IPluginLogger {
 
     @Override
     public void info(String message) {
-        plugin.getLogger().info(message);
+        plugin.getLogger().info("[" + getCallerClassName() + "] " + message);
     }
 
     @Override
     public void debug(String message, String... additionalInfo) {
         if (!isDebugEnabled()) return;
-        plugin.getLogger().info("[Debug] " + message);
+        plugin.getLogger().info("[Debug " + getCallerClassName() + "] " + message);
         for (String info : additionalInfo) {
             plugin.getLogger().info("[Debug] " + info);
         }
@@ -86,7 +97,18 @@ public class PluginLogger implements IPluginLogger {
     @Override
     public void debug(String message) {
         if (!isDebugEnabled()) return;
-        plugin.getLogger().info("[Debug] " + message);
+        plugin.getLogger().info("[Debug " + getCallerClassName() + "] " + message);
+    }
+
+    private String getCallerClassName() {
+        StackTraceElement[] stElements = Thread.currentThread().getStackTrace();
+        for (int i=1; i<stElements.length; i++) {
+            StackTraceElement ste = stElements[i];
+            if (!ste.getClassName().equals(getClass().getName()) && ste.getClassName().indexOf("java.lang.Thread")!=0) {
+                return ste.getClassName().substring(ste.getClassName().lastIndexOf('.')+1);
+            }
+        }
+        return null;
     }
 
     private File getCurrentExceptionFile() {

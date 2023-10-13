@@ -2,7 +2,8 @@ package com.njdaeger.plotmanager.dataaccess.databases.mysql;
 
 import com.njdaeger.plotmanager.dataaccess.Identifiable;
 import com.njdaeger.plotmanager.dataaccess.models.Column;
-import com.njdaeger.plotmanager.dataaccess.transactional.ITransaction;
+import com.njdaeger.plotmanager.dataaccess.transactional.AbstractDatabaseTransaction;
+import com.njdaeger.pluginlogger.IPluginLogger;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
@@ -13,11 +14,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class MySqlTransaction implements ITransaction<Connection> {
+public class MySqlTransaction extends AbstractDatabaseTransaction<Connection> {
 
     private final Connection connection;
 
-    public MySqlTransaction(Connection connection) {
+    public MySqlTransaction(Connection connection, IPluginLogger logger) {
+        super(logger);
         this.connection = connection;
     }
 
@@ -27,6 +29,7 @@ public class MySqlTransaction implements ITransaction<Connection> {
         for (var param : params.entrySet()) {
             statement.setObject(Integer.parseInt(param.getKey()), param.getValue());
         }
+        logger.debug("Executing query: " + query.replace("\n", " ").replace("\r", " "));
         var changes = statement.executeUpdate();
         if (changes == 0) return -1;
 
@@ -44,6 +47,7 @@ public class MySqlTransaction implements ITransaction<Connection> {
         for (var param : params.entrySet()) {
             statement.setObject(Integer.parseInt(param.getKey()), param.getValue());
         }
+        logger.debug("Executing query: " + query.replace("\n", " ").replace("\r", " "));
         var rSet = statement.executeQuery();
         var res = new ArrayList<R>();
         while (rSet.next()) {
@@ -74,7 +78,7 @@ public class MySqlTransaction implements ITransaction<Connection> {
     }
 
     @Override
-    public void close() throws Exception {
+    public void closeTransaction() throws Exception {
         connection.close();
     }
 }

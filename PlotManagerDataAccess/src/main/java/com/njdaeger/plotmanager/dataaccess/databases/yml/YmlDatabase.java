@@ -4,7 +4,7 @@ import com.njdaeger.pdk.config.IConfig;
 import com.njdaeger.plotmanager.dataaccess.DatabaseType;
 import com.njdaeger.plotmanager.dataaccess.IDatabase;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
-import com.njdaeger.plotmanager.dataaccess.transactional.ITransaction;
+import com.njdaeger.plotmanager.dataaccess.transactional.AbstractDatabaseTransaction;
 import org.bukkit.plugin.Plugin;
 
 import java.util.Map;
@@ -48,17 +48,17 @@ public class YmlDatabase implements IDatabase {
     }
 
     @Override
-    public ITransaction createTransaction() throws Exception {
+    public AbstractDatabaseTransaction createTransaction() throws Exception {
         return null;
     }
 
     @Override
-    public void rollbackTransaction(ITransaction transaction) {
+    public void rollbackTransaction(AbstractDatabaseTransaction transaction) {
 
     }
 
     @Override
-    public boolean commitTransaction(ITransaction transaction) {
+    public boolean commitTransaction(AbstractDatabaseTransaction transaction) {
         return false;
     }
 

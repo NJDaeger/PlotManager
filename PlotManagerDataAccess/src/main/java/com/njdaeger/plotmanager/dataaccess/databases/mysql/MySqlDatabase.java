@@ -14,18 +14,14 @@ import java.sql.SQLException;
 
 public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
 
-    private final Plugin plugin;
     private final IProcedure procedures;
     private final IPluginLogger logger;
-    private final IServiceProvider provider;
     private final ISection credentials;
     private boolean successfulLoad;
 
-    public MySqlDatabase(Plugin plugin, IConfig config, IServiceProvider provider, IProcedure procedures, IPluginLogger logger) {
-        this.plugin = plugin;
+    public MySqlDatabase(IConfig config, IProcedure procedures, IPluginLogger logger) {
         this.procedures = procedures;
         this.logger = logger;
-        this.provider = provider;
         this.credentials = config.getSection("database.credentials");
         this.successfulLoad = false;
     }
@@ -59,18 +55,19 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
 
     @Override
     public MySqlTransaction createTransaction() throws Exception {
-        return new MySqlTransaction(createConnection());
+        return new MySqlTransaction(createConnection(), logger);
     }
 
     @Override
     public boolean commitTransaction(MySqlTransaction transaction) {
         var conn = transaction.getTransaction();
         try {
+            logger.debug("Transaction commit: " + transaction.getTransactionId());
             conn.commit();
             return true;
         } catch (SQLException e) {
             rollbackTransaction(transaction);
-            logger.exception(e, "Failed to commit transaction.");
+            logger.exception(e, "Failed to commit transaction: " + transaction.getTransactionId());
         }
         return false;
     }
@@ -79,9 +76,10 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
     public void rollbackTransaction(MySqlTransaction transaction) {
         var conn = transaction.getTransaction();
         try {
+            logger.debug("Transaction rollback: " + transaction.getTransactionId());
             conn.rollback();
         } catch (SQLException e) {
-            logger.exception(e, "Failed to rollback transaction.");
+            logger.exception(e, "Failed to rollback transaction: " + transaction.getTransactionId());
             throw new RuntimeException(e);
         }
     }

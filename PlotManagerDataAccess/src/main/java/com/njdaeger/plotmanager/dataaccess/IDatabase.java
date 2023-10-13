@@ -1,8 +1,8 @@
 package com.njdaeger.plotmanager.dataaccess;
 
-import com.njdaeger.plotmanager.dataaccess.transactional.ITransaction;
+import com.njdaeger.plotmanager.dataaccess.transactional.AbstractDatabaseTransaction;
 
-public interface IDatabase<T extends ITransaction<T2>, T2> {
+public interface IDatabase<T extends AbstractDatabaseTransaction<T2>, T2> {
 
     /**
      * Get the procedures for this database.

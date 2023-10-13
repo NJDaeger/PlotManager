@@ -4,7 +4,7 @@ import com.njdaeger.plotmanager.dataaccess.IRepository;
 
 public interface IUnitOfWork extends AutoCloseable {
 
-    ITransaction<?> getTransaction();
+    AbstractDatabaseTransaction<?> getTransaction();
 
     <R extends IRepository> R repo(Class<R> repositoryClass);
 

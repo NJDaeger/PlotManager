@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS `Group`
     modified bigint NULL,
     modifiedBy int NULL,
     CONSTRAINT Group_pk PRIMARY KEY (id),
+    CONSTRAINT Group_name_uc UNIQUE (name),
     CONSTRAINT Group_createdBy_fk FOREIGN KEY (createdBy) REFERENCES User (id),
     CONSTRAINT Group_modifiedBy_fk FOREIGN KEY (modifiedBy) REFERENCES User (id)
 )

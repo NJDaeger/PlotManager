@@ -3,6 +3,7 @@ package com.njdaeger.plotmanager.dataaccess.databases.mysql;
 import com.google.common.base.Verify;
 import com.njdaeger.pdk.utils.Pair;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
+import com.njdaeger.plotmanager.dataaccess.Util;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,7 +73,7 @@ public class MySqlProcedures implements IProcedure {
     @Override
     public Pair<String, Map<String, Object>> insertSystemUser() {
         return Pair.of("insert ignore into User (uuid, username, createdBy) values (?, ?, ?)", Map.of(
-                "1", UUID.fromString("00000000-0000-0000-0000-000000000000").toString(),
+                "1", Util.SYSTEM_UUID.toString(),
                 "2", "#system",
                 "3", 0
         ));
@@ -156,7 +157,7 @@ public class MySqlProcedures implements IProcedure {
 
     @Override
     public Pair<String, Map<String, Object>> insertWorld(int createdBy, UUID uuid, String worldName) {
-        return Pair.of("insert into World (uuid, name, createdBy) values (?, ?, ?)", Map.of(
+        return Pair.of("insert ignore into World (uuid, name, createdBy) values (?, ?, ?)", Map.of(
                 "1", uuid.toString(),
                 "2", worldName,
                 "3", createdBy

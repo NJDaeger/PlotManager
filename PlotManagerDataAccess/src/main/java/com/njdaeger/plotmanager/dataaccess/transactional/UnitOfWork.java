@@ -19,11 +19,11 @@ import org.bukkit.plugin.Plugin;
 public class UnitOfWork implements IUnitOfWork {
 
     private final IServiceProvider uowServiceProvider;
-    private final ITransaction<?> transaction;
-    private final IDatabase<ITransaction<?>, ?> database;
+    private final AbstractDatabaseTransaction<?> transaction;
+    private final IDatabase<AbstractDatabaseTransaction<?>, ?> database;
     private final IPluginLogger logger;
 
-    public UnitOfWork(Plugin plugin, IPluginLogger logger, IDatabase<ITransaction<?>, ?> database) {
+    public UnitOfWork(Plugin plugin, IPluginLogger logger, IDatabase<AbstractDatabaseTransaction<?>, ?> database) {
         this.logger = logger;
         try {
             this.transaction = database.createTransaction();
@@ -33,7 +33,7 @@ public class UnitOfWork implements IUnitOfWork {
         }
         this.uowServiceProvider = ServiceProviderBuilder.builder()
                 .addSingleton(IPluginLogger.class, (s) -> logger)
-                .addSingleton(ITransaction.class, (s) -> this.transaction)
+                .addSingleton(AbstractDatabaseTransaction.class, (s) -> this.transaction)
                 .addSingleton(IProcedure.class, (s) -> database.getProcedures())
                 .addSingleton(IAttributeRepository.class, AttributeRepository.class)
                 .addSingleton(IUserRepository.class, UserRepository.class)
@@ -44,12 +44,13 @@ public class UnitOfWork implements IUnitOfWork {
     }
 
     @Override
-    public ITransaction<?> getTransaction() {
+    public AbstractDatabaseTransaction<?> getTransaction() {
         return transaction;
     }
 
     @Override
     public <R extends IRepository> R repo(Class<R> repositoryClass) {
+        logger.debug("Getting repository " + repositoryClass.getSimpleName() + " from unit of work.");
         return uowServiceProvider.getRequiredService(repositoryClass);
     }
 

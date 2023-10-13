@@ -87,7 +87,7 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
             var userService = transaction.getService(IUserService.class);
             var system = await(userService.getSystemUser()).getOrThrow();
 
-            Bukkit.getWorlds().forEach(w -> await(worldService.getWorldByUuid(w.getUID()).thenApplyAsync(wRes -> {
+            Bukkit.getWorlds().forEach(w -> await(worldService.getWorldByUuid(w.getUID()).thenApply(wRes -> {
                 if (!wRes.successful()) return await(worldService.createWorld(system.getUserId(), w)).getOrThrow();
                 else {
                     var world = wRes.getOrThrow();

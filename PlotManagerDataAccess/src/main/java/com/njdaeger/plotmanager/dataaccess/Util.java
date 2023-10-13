@@ -4,11 +4,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class Util {
+
+    public static final UUID SYSTEM_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
     /**
      * Get a resource from the jar file.
@@ -51,5 +55,10 @@ public class Util {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    //async
+    public static <R> CompletableFuture<R> async(Supplier<R> supplier) {
+        return CompletableFuture.supplyAsync(supplier);
     }
 }

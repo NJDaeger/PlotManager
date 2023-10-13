@@ -1,5 +1,6 @@
 package com.njdaeger.plotmanager.servicelibrary.services;
 
+import com.njdaeger.plotmanager.dataaccess.Util;
 import com.njdaeger.plotmanager.servicelibrary.transactional.ITransactionalService;
 import com.njdaeger.plotmanager.servicelibrary.Result;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
@@ -70,7 +71,7 @@ public interface IUserService extends ITransactionalService {
      * @return A result with the system user if successful, or a result with null if the user retrieval was unsuccessful, or no user found.
      */
     default CompletableFuture<Result<User>> getSystemUser() {
-        return getUserByUuid(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+        return getUserByUuid(Util.SYSTEM_UUID);
     }
 
 }

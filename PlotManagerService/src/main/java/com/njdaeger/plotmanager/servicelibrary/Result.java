@@ -79,7 +79,7 @@ public class Result<T> {
      * @return True if this result was successful, false otherwise.
      */
     public boolean successful() {
-        return false;
+        return successful;
     }
 
     /**
@@ -88,7 +88,7 @@ public class Result<T> {
      */
     @Nonnull
     public String message() {
-        return "";
+        return message;
     }
 
 }

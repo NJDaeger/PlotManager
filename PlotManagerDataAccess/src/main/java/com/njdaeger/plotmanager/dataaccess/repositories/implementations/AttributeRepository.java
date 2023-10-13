@@ -4,7 +4,7 @@ import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
 import com.njdaeger.plotmanager.dataaccess.models.AttributeEntity;
 import com.njdaeger.plotmanager.dataaccess.repositories.IAttributeRepository;
-import com.njdaeger.plotmanager.dataaccess.transactional.ITransaction;
+import com.njdaeger.plotmanager.dataaccess.transactional.AbstractDatabaseTransaction;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -14,10 +14,10 @@ import static com.njdaeger.plotmanager.dataaccess.Util.await;
 public class AttributeRepository implements IAttributeRepository {
 
     private final IPluginLogger logger;
-    private final ITransaction<?> transaction;
+    private final AbstractDatabaseTransaction<?> transaction;
     private final IProcedure procedures;
 
-    public AttributeRepository(IPluginLogger logger, IProcedure procedures, ITransaction<?> transaction) {
+    public AttributeRepository(IPluginLogger logger, IProcedure procedures, AbstractDatabaseTransaction<?> transaction) {
         this.logger = logger;
         this.transaction = transaction;
         this.procedures = procedures;

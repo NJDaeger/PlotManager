@@ -4,7 +4,7 @@ import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
 import com.njdaeger.plotmanager.dataaccess.models.UserEntity;
 import com.njdaeger.plotmanager.dataaccess.repositories.IUserRepository;
-import com.njdaeger.plotmanager.dataaccess.transactional.ITransaction;
+import com.njdaeger.plotmanager.dataaccess.transactional.AbstractDatabaseTransaction;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,10 +15,10 @@ import static com.njdaeger.plotmanager.dataaccess.Util.await;
 public class UserRepository implements IUserRepository {
 
     private final IPluginLogger logger;
-    private final ITransaction<?> transaction;
+    private final AbstractDatabaseTransaction<?> transaction;
     private final IProcedure procedures;
 
-    public UserRepository(IPluginLogger logger, IProcedure procedures, ITransaction<?> transaction) {
+    public UserRepository(IPluginLogger logger, IProcedure procedures, AbstractDatabaseTransaction<?> transaction) {
         this.logger = logger;
         this.transaction = transaction;
         this.procedures = procedures;
