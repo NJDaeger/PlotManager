@@ -1,4 +1,4 @@
-package com.njdaeger.plotmanager.plugin.commands;
+package com.njdaeger.plotmanager.plugin.wrappers;
 
 import com.njdaeger.pdk.command.CommandBuilder;
 import com.njdaeger.pdk.command.PDKCommand;

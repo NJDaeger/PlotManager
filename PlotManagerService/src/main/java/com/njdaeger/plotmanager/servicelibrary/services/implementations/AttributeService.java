@@ -3,6 +3,7 @@ package com.njdaeger.plotmanager.servicelibrary.services.implementations;
 import com.njdaeger.plotmanager.dataaccess.repositories.IAttributeRepository;
 import com.njdaeger.plotmanager.dataaccess.transactional.IUnitOfWork;
 import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
+import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
 import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
 import com.njdaeger.plotmanager.servicelibrary.Result;
 import com.njdaeger.plotmanager.servicelibrary.models.Attribute;
@@ -20,11 +21,13 @@ public class AttributeService implements IAttributeService {
 
     private final IUnitOfWork uow;
     private final IUserService userService;
+    private final IConfigService configService;
     private static final Map<String, Attribute> attributeCache = new ConcurrentHashMap<>();
 
-    public AttributeService(IUnitOfWork uow, IUserService userService) {
+    public AttributeService(IUnitOfWork uow, IUserService userService, IConfigService configService) {
         this.uow = uow;
         this.userService = userService;
+        this.configService = configService;
     }
 
     @Override
@@ -41,14 +44,15 @@ public class AttributeService implements IAttributeService {
 
     @Override
     public CompletableFuture<Result<Attribute>> createAttribute(UUID createdBy, String name, String type) {
-        if (attributeCache.containsKey(name)) {
-            return CompletableFuture.completedFuture(Result.bad("An attribute with that name already exists."));
-        }
+        if (name == null || name.isBlank()) return CompletableFuture.completedFuture(Result.bad("Attribute name cannot be null or blank."));
+        if (type == null || type.isBlank()) return CompletableFuture.completedFuture(Result.bad("Attribute type cannot be null or blank."));
+        if (attributeCache.containsKey(name)) return CompletableFuture.completedFuture(Result.bad("An attribute with that name already exists."));
+
+        var attributeType = configService.getAttributeType(type);
+        if (attributeType == null) return CompletableFuture.completedFuture(Result.bad("An attribute type with that name does not exist."));
 
         var userId = await(userService.getUserByUuid(createdBy)).getOr(User::getId, -1);
-        if (userId == -1) {
-            return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + createdBy + "."));
-        }
+        if (userId == -1) return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + createdBy + "."));
 
         return uow.repo(IAttributeRepository.class).insertAttribute(userId, name, type).thenApply(success -> {
             if (success == null) return Result.bad("Failed to insert attribute.");

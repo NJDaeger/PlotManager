@@ -1,5 +1,6 @@
 package com.njdaeger.plotmanager.plugin;
 
+import com.njdaeger.plotmanager.plugin.commands.AttributeCommands;
 import com.njdaeger.pluginlogger.PluginLogger;
 import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.pdk.config.IConfig;
