@@ -10,8 +10,14 @@ public interface IConfigService extends IConfig {
 
     DatabaseType getDatabaseType();
 
+    List<AttributeType> getRequiredPlotAttributes();
+
     AttributeType getAttributeType(String name);
 
     List<AttributeType> getAttributeTypes();
+
+    List<AttributeType> getDefaultAttributeTypes();
+
+    boolean isSetupMode();
 
 }

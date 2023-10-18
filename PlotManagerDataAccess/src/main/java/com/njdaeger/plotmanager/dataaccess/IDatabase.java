@@ -17,8 +17,10 @@ public interface IDatabase<T extends AbstractDatabaseTransaction<T2>, T2> {
 
     /**
      * Create a database.
+     *
+     * @return
      */
-    void initializeDatabase();
+    boolean initializeDatabase();
 
     /**
      * Check if the database has successfully loaded

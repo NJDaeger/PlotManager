@@ -33,8 +33,8 @@ public class YmlDatabase implements IDatabase {
     }
 
     @Override
-    public void initializeDatabase() {
-
+    public boolean initializeDatabase() {
+        return false;
     }
 
     @Override

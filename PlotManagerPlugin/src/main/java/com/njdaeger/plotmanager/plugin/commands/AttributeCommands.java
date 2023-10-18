@@ -1,20 +1,19 @@
 package com.njdaeger.plotmanager.plugin.commands;
 
-import com.njdaeger.pdk.command.CommandContext;
+import com.njdaeger.pdk.command.TabContext;
 import com.njdaeger.pdk.command.exception.PDKCommandException;
 import com.njdaeger.pdk.utils.text.Text;
 import com.njdaeger.pdk.utils.text.click.ClickAction;
 import com.njdaeger.pdk.utils.text.click.ClickString;
 import com.njdaeger.pdk.utils.text.hover.HoverAction;
 import com.njdaeger.pdk.utils.text.pager.ChatPaginator;
-import com.njdaeger.pdk.utils.text.pager.ChatPaginatorBuilder;
 import com.njdaeger.pdk.utils.text.pager.ComponentPosition;
 import com.njdaeger.pdk.utils.text.pager.components.PageNavigationComponent;
 import com.njdaeger.pdk.utils.text.pager.components.ResultCountComponent;
-import com.njdaeger.plotmanager.dataaccess.Util;
 import com.njdaeger.plotmanager.plugin.IPlotManagerPlugin;
-import com.njdaeger.plotmanager.plugin.wrappers.CommandBuilderWrapper;
-import com.njdaeger.plotmanager.plugin.wrappers.CommandContextWrapper;
+import com.njdaeger.plotmanager.plugin.commands.flags.PageFlag;
+import com.njdaeger.plotmanager.plugin.commands.wrappers.CommandBuilderWrapper;
+import com.njdaeger.plotmanager.plugin.commands.wrappers.CommandContextWrapper;
 import com.njdaeger.plotmanager.servicelibrary.models.Attribute;
 import com.njdaeger.plotmanager.servicelibrary.models.AttributeType;
 import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
@@ -22,7 +21,6 @@ import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 import com.njdaeger.serviceprovider.IServiceProvider;
 import org.bukkit.ChatColor;
-import org.bukkit.Color;
 
 import static com.njdaeger.plotmanager.dataaccess.Util.await;
 
@@ -40,11 +38,13 @@ public class AttributeCommands {
         this.provider = provider;
         this.configService = configService;
 
-        CommandBuilderWrapper.of("attribute")
+        CommandBuilderWrapper.of("attribute", "pmattribute")
                 .executor(this::attributeCommands)
-                .description("test command")
-                .usage("/attribute create <name> <type> | /attribute list | /attribute delete <name>")
+                .completer(this::attributeCommandCompletions)
+                .description("Manage attributes.")
+                .usage("/attribute create attribute <name> <type> | /attribute list | /attribute delete <name>")
                 .permissions("plotmanager.attribute.create", "plotmanager.attribute.list", "plotmanager.attribute.delete")
+                .flag(new PageFlag(ctx -> ctx.hasArgAt(0, "list") && (ctx.hasArgAt(1, "attributes") || ctx.hasArgAt(1, "types"))))
                 .build()
                 .register(plugin);
 
@@ -62,7 +62,7 @@ public class AttributeCommands {
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + attr.getType()))
                     .appendRoot(")")
                         .setColor(ChatColor.GRAY))
-                .addComponent(new ResultCountComponent<>(false), ComponentPosition.TOP_LEFT)
+                .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg - 1),
@@ -80,7 +80,7 @@ public class AttributeCommands {
                         .setColor(ChatColor.LIGHT_PURPLE)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ChatColor.GRAY))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + type.getName())))
-                .addComponent(new ResultCountComponent<>(false), ComponentPosition.TOP_LEFT)
+                .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg - 1),
@@ -96,7 +96,7 @@ public class AttributeCommands {
                         .setBold(true)
                     .appendRoot(value)
                         .setColor(ChatColor.LIGHT_PURPLE))
-                .addComponent(new ResultCountComponent<>(false), ComponentPosition.TOP_LEFT)
+                .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg - 1),
@@ -107,59 +107,31 @@ public class AttributeCommands {
                 .build();
     }
 
-    /*
-    Attribute Commands:
+    private void attributeCommandCompletions(TabContext context) throws PDKCommandException {
+        context.completionAt(0, "create", "list", "delete");
+        context.subCompletionAt(1, "create", (c) -> c.completion("attribute"));
 
-    /attribute list
-    /attribute create <name> <type>
-//    /attribute edit <attributeName> name|type <value>
-//        type edits are special:
-//            when a type is chnaged, all assigned plots will be verified to ensure compatibility
-//            whichever plots do not conform will have a few options
-//                if the type is required, a default value must be specified. (which may be based off of a predicate or mapping)
-//                if the type is not required, the attribute can be deleted, mapped to a new value, or defaulted
-//        type edits will verify all plots conform to the new type
-//        if there are plots that do not conform to the new type, there will be a few options
-//
-//        1. Delete all plots that do not conform to the new type
-    /attribute delete <name>
-
-
-    Group Commands:
-
-    /group list
-    /group create <name>
-    /group edit <groupName> <columnBeingEdited> <value>
-    /group delete <name>
-
-     */
-
-//    private void attributeCommands(CommandContext ctx) throws PDKCommandException {
-//        async2(ctx, (c) -> {
-//            try (var transaction = provider.getRequiredService(IServiceTransaction.class)) {
-//
-//            } catch (Exception e) {
-//                throw new PDKCommandException(e.getMessage());
-//            }
-//        });
-//    }
-//
-//    private CompletableFuture<?> async2(CommandContext ctx, CommandExecutor exec) {
-//        return CompletableFuture.supplyAsync(() -> {
-//            try {
-//                exec.execute(ctx);
-//            } catch (PDKCommandException e) {
-//                ctx.reply(e.getMessage());
-//            }
-//            return null;
-//        });
-//    }
+        context.subCompletionAt(1, "list", (c) -> c.completion("attributes", "types"));
+        context.subCompletionAt(1, "delete", (c) -> c.completion("attribute"));
+    }
 
     private void attributeCommands(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
-        if (context.subCommand((ctx) -> ctx.hasArgAt(0, "create") && ctx.hasArgAt(1, "attribute"), this::createAttribute)) return;
-
-        if (context.subCommandAt(1, "list", true, this::listAttributes)) return;
-        if (context.subCommandAt(1, "delete", true, this::deleteAttribute)) return;
+        if (context.hasArgAt(0, "create") && context.hasArgAt(1, "attribute")) {
+            createAttribute(transaction, context);
+            return;
+        }
+        if (context.hasArgAt(0, "list") && context.hasArgAt(1, "attributes")) {
+            listAttributes(transaction, context);
+            return;
+        }
+        if (context.hasArgAt(0, "list") && context.hasArgAt(1, "types")) {
+            listAttributeTypes(transaction, context);
+            return;
+        }
+        if (context.hasArgAt(0, "delete")) {
+            deleteAttribute(transaction, context);
+            return;
+        }
         context.error("Unknown subcommand.");
     }
 
@@ -190,7 +162,9 @@ public class AttributeCommands {
         int page = context.getFlag("page", 1);
         var attribs = await(attribServ.getAttributes());
         if (attribs.successful()) {
-            attributeListPaginator.generatePage(context, attribs.getOrThrow(), page).sendTo(context.getSender());
+            var res = attributeListPaginator.generatePage(context, attribs.getOrThrow(), page);
+            if (res != null) res.sendTo(context.getSender());
+            else context.error("No results to show.");
         } else context.error(attribs.message());
     }
 
@@ -201,17 +175,38 @@ public class AttributeCommands {
         int page = context.getFlag("page", 1);
         var type = context.argAt(2);
         if (type == null) {
-            configService
+            var res = attributeTypeListPaginator.generatePage(context, configService.getAttributeTypes(), page);
+            if (res != null) res.sendTo(context.getSender());
+            else context.error("No results to show.");
+        } else {
+            var attribType = configService.getAttributeType(type);
+            if (attribType == null) {
+                context.error("An attribute type with that name does not exist.");
+                return;
+            }
+            var res = attributeValueListPaginator.generatePage(context, attribType.getValues(), page);
+            if (res != null) res.sendTo(context.getSender());
+            else context.error("No results to show.");
         }
     }
 
+    // /attribute delete attribute <name>
+    /*
+    if this attribute is required by plots, attribute cannot be deleted until it is removed from the requirements
+     */
     private void deleteAttribute(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
         var attributeServ = transaction.getService(IAttributeService.class);
-        var deleter = context.isPlayer() ? context.asPlayer().getUniqueId() : Util.SYSTEM_UUID;
-        var res = await(attributeServ.deleteAttribute(deleter, "test"));
+        var deleter = context.getUUID();
+        var name = context.argAtOrThrow(2, "You must specify a name for the attribute.");
+        var res = await(attributeServ.deleteAttribute(deleter, name));
         if (res.successful()) {
+            context.send(Text.of("[PlotManager] ").setColor(ChatColor.LIGHT_PURPLE)
+                    .appendRoot("Attribute ").setColor(ChatColor.GRAY)
+                    .appendRoot(name).setColor(ChatColor.LIGHT_PURPLE)
+                    .appendRoot(" deleted.").setColor(ChatColor.GRAY)
+            );
+        } else context.error(res.message());
 
-        }
     }
 
 }

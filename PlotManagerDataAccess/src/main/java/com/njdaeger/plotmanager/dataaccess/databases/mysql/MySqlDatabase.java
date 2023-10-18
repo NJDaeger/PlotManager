@@ -4,8 +4,6 @@ import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.pdk.config.IConfig;
 import com.njdaeger.pdk.config.ISection;
 import com.njdaeger.plotmanager.dataaccess.*;
-import com.njdaeger.serviceprovider.IServiceProvider;
-import org.bukkit.plugin.Plugin;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -85,7 +83,7 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
     }
 
     @Override
-    public void initializeDatabase() {
+    public boolean initializeDatabase() {
         try (var transaction = createTransaction()) {
             loadTable(transaction, "SchemaVersion.sql");
             loadTable(transaction, "User.sql");
@@ -117,6 +115,7 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
             logger.exception(e, "Failed to create databases");
             successfulLoad = false;
         }
+        return successfulLoad;
     }
 
     @Override

@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.stream.Stream;
 
 public class Util {
 
@@ -55,6 +56,10 @@ public class Util {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void awaitAll(CompletableFuture<?>... futures) {
+        Stream.of(futures).parallel().forEach(Util::await);
     }
 
     //async

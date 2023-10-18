@@ -1,4 +1,4 @@
-package com.njdaeger.plotmanager.plugin.wrappers;
+package com.njdaeger.plotmanager.plugin.commands.wrappers;
 
 import com.njdaeger.pdk.command.CommandContext;
 import com.njdaeger.pdk.command.CommandExecutor;
@@ -12,11 +12,10 @@ public interface TransactionalCommandExecutor extends CommandExecutor {
 
     @Override
     default void execute(CommandContext context) {
-        var outer = this;
         Bukkit.getScheduler().runTaskAsynchronously(context.getPlugin(), () -> {
             var sp = ((IPlotManagerPlugin) context.getPlugin()).getServiceProvider();
             try (var transaction = sp.getRequiredService(IServiceTransaction.class)) {
-                outer.execute(transaction, new CommandContextWrapper(context));
+                this.execute(transaction, new CommandContextWrapper(context));
             } catch (PDKCommandException e) {
                 e.showError(context.getSender());
             } catch (Exception e) {

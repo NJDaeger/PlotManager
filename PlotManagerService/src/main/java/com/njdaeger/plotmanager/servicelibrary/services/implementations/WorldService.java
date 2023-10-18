@@ -7,6 +7,7 @@ import com.njdaeger.plotmanager.servicelibrary.services.IWorldService;
 import com.njdaeger.plotmanager.servicelibrary.Result;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
 import com.njdaeger.plotmanager.servicelibrary.models.World;
+import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 
 import java.util.List;
 import java.util.Map;
@@ -18,20 +19,25 @@ import static com.njdaeger.plotmanager.dataaccess.Util.await;
 
 public class WorldService implements IWorldService {
 
-    private final IUnitOfWork uow;
+    private final IServiceTransaction transaction;
     private final IUserService userService;
     private static final Map<UUID, World> worldCache = new ConcurrentHashMap<>();
 
-    public WorldService(IUnitOfWork uow, IUserService userService) {
-        this.uow = uow;
+    public WorldService(IServiceTransaction transaction, IUserService userService) {
+        this.transaction = transaction;
         this.userService = userService;
     }
 
     @Override
     public CompletableFuture<Result<List<World>>> getWorlds() {
-        if (!worldCache.isEmpty()) return CompletableFuture.completedFuture(Result.good(List.copyOf(worldCache.values())));
+        transaction.use();
+        if (!worldCache.isEmpty()) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.good(List.copyOf(worldCache.values())));
+        }
 
-        return uow.repo(IWorldRepository.class).getWorlds().thenApply(worlds -> {
+        return transaction.getUnitOfWork().repo(IWorldRepository.class).getWorlds().thenApply(worlds -> {
+            transaction.release();
             worlds.forEach(world -> {
                 var uuid = UUID.fromString(world.getUuid());
                 worldCache.put(uuid, new World(world.getId(), uuid, world.getName()));
@@ -42,9 +48,14 @@ public class WorldService implements IWorldService {
 
     @Override
     public CompletableFuture<Result<World>> getWorldByUuid(UUID worldUuid) {
-        if (worldCache.containsKey(worldUuid)) return CompletableFuture.completedFuture(Result.good(worldCache.get(worldUuid)));
+        transaction.use();
+        if (worldCache.containsKey(worldUuid)) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.good(worldCache.get(worldUuid)));
+        }
 
-        return uow.repo(IWorldRepository.class).getWorldByUuid(worldUuid).thenApply(world -> {
+        return transaction.getUnitOfWork().repo(IWorldRepository.class).getWorldByUuid(worldUuid).thenApply(world -> {
+            transaction.release();
             if (world == null) return Result.bad("World not found.");
             var uuid = UUID.fromString(world.getUuid());
             var newWorld = new World(world.getId(), uuid, world.getName());
@@ -55,12 +66,20 @@ public class WorldService implements IWorldService {
 
     @Override
     public CompletableFuture<Result<World>> createWorld(UUID createdBy, org.bukkit.World world) {
-        if (worldCache.containsKey(world.getUID())) return CompletableFuture.completedFuture(Result.bad("A world with that uuid already exists."));
+        transaction.use();
+        if (worldCache.containsKey(world.getUID())) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("A world with that uuid already exists."));
+        }
 
         var userId = await(userService.getUserByUuid(createdBy)).getOr(User::getId, -1);
-        if (userId == -1) return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + createdBy + "."));
+        if (userId == -1) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + createdBy + "."));
+        }
 
-        return uow.repo(IWorldRepository.class).insertWorld(userId, world.getUID(), world.getName()).thenApply(newWorld -> {
+        return transaction.getUnitOfWork().repo(IWorldRepository.class).insertWorld(userId, world.getUID(), world.getName()).thenApply(newWorld -> {
+            transaction.release();
             if (newWorld == null) return Result.bad("Failed to create world.");
             var uuid = UUID.fromString(newWorld.getUuid());
             var newWorldModel = new World(newWorld.getId(), uuid, newWorld.getName());
@@ -71,13 +90,21 @@ public class WorldService implements IWorldService {
 
     @Override
     public CompletableFuture<Result<World>> updateWorld(UUID updatedBy, UUID worldUuid, String newWorldName) {
+        transaction.use();
         var oldWorld = await(getWorldByUuid(worldUuid)).getOr(null);
-        if (oldWorld == null) return CompletableFuture.completedFuture(Result.bad("Failed to find world with uuid " + worldUuid + "."));
+        if (oldWorld == null) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Failed to find world with uuid " + worldUuid + "."));
+        }
 
         var userId = await(userService.getUserByUuid(updatedBy)).getOr(User::getId, -1);
-        if (userId == -1) return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + updatedBy + "."));
+        if (userId == -1) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + updatedBy + "."));
+        }
 
-        return uow.repo(IWorldRepository.class).updateWorld(userId, oldWorld.getId(), oldWorld.getWorldUuid(), newWorldName).thenApply(newWorld -> {
+        return transaction.getUnitOfWork().repo(IWorldRepository.class).updateWorld(userId, oldWorld.getId(), oldWorld.getWorldUuid(), newWorldName).thenApply(newWorld -> {
+            transaction.release();
             if (newWorld == null) return Result.bad("Failed to update world.");
             var uuid = UUID.fromString(newWorld.getUuid());
             var newWorldModel = new World(newWorld.getId(), uuid, newWorld.getName());
@@ -88,15 +115,21 @@ public class WorldService implements IWorldService {
 
     @Override
     public CompletableFuture<Result<World>> updateWorld(UUID updatedBy, UUID oldWorldUuid, UUID newWorldUuid) {
+        transaction.use();
         var oldWorld = await(getWorldByUuid(oldWorldUuid)).getOr(null);
-        if (oldWorld == null)
+        if (oldWorld == null) {
+            transaction.release();
             return CompletableFuture.completedFuture(Result.bad("Failed to find world with uuid " + oldWorldUuid + "."));
+        }
 
         var userId = await(userService.getUserByUuid(updatedBy)).getOr(User::getId, -1);
-        if (userId == -1)
+        if (userId == -1) {
+            transaction.release();
             return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + updatedBy + "."));
+        }
 
-        return uow.repo(IWorldRepository.class).updateWorld(userId, oldWorld.getId(), newWorldUuid, oldWorld.getWorldName()).thenApply(newWorld -> {
+        return transaction.getUnitOfWork().repo(IWorldRepository.class).updateWorld(userId, oldWorld.getId(), newWorldUuid, oldWorld.getWorldName()).thenApply(newWorld -> {
+            transaction.release();
             if (newWorld == null) return Result.bad("Failed to update world.");
             var uuid = UUID.fromString(newWorld.getUuid());
             var newWorldModel = new World(newWorld.getId(), uuid, newWorld.getName());
@@ -108,13 +141,21 @@ public class WorldService implements IWorldService {
 
     @Override
     public CompletableFuture<Result<World>> deleteWorld(UUID deletedBy, UUID worldUuid) {
+        transaction.use();
         var oldWorld = await(getWorldByUuid(worldUuid)).getOr(null);
-        if (oldWorld == null) return CompletableFuture.completedFuture(Result.bad("Failed to find world with uuid " + worldUuid + "."));
+        if (oldWorld == null) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Failed to find world with uuid " + worldUuid + "."));
+        }
 
         var userId = await(userService.getUserByUuid(deletedBy)).getOr(User::getId, -1);
-        if (userId == -1) return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + deletedBy + "."));
+        if (userId == -1) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Failed to find user with uuid " + deletedBy + "."));
+        }
 
-        return uow.repo(IWorldRepository.class).deleteWorld(userId, oldWorld.getId()).thenApply(deletedWorld -> {
+        return transaction.getUnitOfWork().repo(IWorldRepository.class).deleteWorld(userId, oldWorld.getId()).thenApply(deletedWorld -> {
+            transaction.release();
             if (deletedWorld == -1) return Result.bad("Failed to delete world.");
             worldCache.remove(worldUuid);
             return Result.good(oldWorld);

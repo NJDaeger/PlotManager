@@ -1,6 +1,8 @@
 package com.njdaeger.plotmanager.plugin;
 
 import com.njdaeger.plotmanager.plugin.commands.AttributeCommands;
+import com.njdaeger.plotmanager.servicelibrary.services.implementations.ConfigValidationService;
+import com.njdaeger.plotmanager.servicelibrary.services.implementations.InitializationService;
 import com.njdaeger.pluginlogger.PluginLogger;
 import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.pdk.config.IConfig;
@@ -55,12 +57,27 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
                 .addTransient(IUnitOfWork.class, UnitOfWork.class)
                 .build(this);
 
-        serviceProvider.getRequiredService(IDatabase.class).initializeDatabase();
+        var res = serviceProvider.getRequiredService(IDatabase.class).initializeDatabase();
+        if (!res) {
 
+            getLogger().severe("""
+                    
+                    ================================================
+                    ==================== NOTICE ====================
+                    Failed to initialize database. Additional plugin features will not be enabled until this is resolved.
+                    
+                    Please check your database configuration in PlotManager/config.yml and try again once it is corrected.
+                    ==================== NOTICE ====================
+                    ================================================
+                    
+                    """);
+            return;
+        }
+
+        serviceProvider.initialize(InitializationService.class).run();
+        serviceProvider.initialize(ConfigValidationService.class).run();
         serviceProvider.initialize(AttributeCommands.class);
         serviceProvider.initialize(PlotManagerListener.class);
-
-        insertWorlds();
     }
 
     @Override
@@ -75,32 +92,6 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
     @Override
     public IServiceProvider getServiceProvider() {
         return serviceProvider;
-    }
-
-    private void insertWorlds() {
-        getLogger().info("Loading worlds...");
-        try (var transaction = serviceProvider.getRequiredService(IServiceTransaction.class)) {
-            var worldService = transaction.getService(IWorldService.class);
-
-            //load database worlds into cache
-            await(worldService.getWorlds());
-
-            var userService = transaction.getService(IUserService.class);
-            var system = await(userService.getSystemUser()).getOrThrow();
-
-            Bukkit.getWorlds().forEach(w -> await(worldService.getWorldByUuid(w.getUID()).thenApply(wRes -> {
-                if (!wRes.successful()) return await(worldService.createWorld(system.getUserId(), w)).getOrThrow();
-                else {
-                    var world = wRes.getOrThrow();
-                    if (!world.getWorldName().equals(w.getName())) world = await(worldService.updateWorld(system.getUserId(), w.getUID(), w.getName())).getOrThrow();
-                    return world;
-                }
-            })));
-
-        } catch (Exception e) {
-            serviceProvider.getRequiredService(IPluginLogger.class).exception(e);
-        }
-        getLogger().info("World loading complete!");
     }
 
 }

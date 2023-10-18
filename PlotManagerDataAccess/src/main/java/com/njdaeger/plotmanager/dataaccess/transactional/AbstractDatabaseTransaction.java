@@ -15,7 +15,7 @@ public abstract class AbstractDatabaseTransaction<T> implements AutoCloseable {
     public AbstractDatabaseTransaction(IPluginLogger logger) {
         this.transactionId = UUID.randomUUID();
         this.logger = logger;
-        logger.debug("DBTransaction created: " + transactionId);
+        logger.debug("Transaction created: " + transactionId);
     }
 
     /**
@@ -108,7 +108,7 @@ public abstract class AbstractDatabaseTransaction<T> implements AutoCloseable {
 
     public void close() throws Exception {
         closeTransaction();
-        logger.debug("DBTransaction closed: " + transactionId);
+        logger.debug("Transaction closed: " + transactionId);
     }
 
 }

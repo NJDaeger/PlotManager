@@ -38,11 +38,12 @@ public class PluginLogger implements IPluginLogger {
     @Override
     public void exception(Exception exception, String... additionalInfo) {
         plugin.getLogger().severe("== ExceptionPublisher Start ==");
-        plugin.getLogger().severe("Exception: " + exception.getMessage());
-        plugin.getLogger().severe("Stacktrace:");
-        for (StackTraceElement element : exception.getStackTrace()) {
-            plugin.getLogger().severe(element.toString());
+        plugin.getLogger().severe("Exception: " + exception);
+        for (String info : additionalInfo) {
+            plugin.getLogger().severe(info);
         }
+        plugin.getLogger().severe("Stacktrace:");
+        exception.printStackTrace();
         writeToFile(exception, additionalInfo);
         plugin.getLogger().severe("== ExceptionPublisher End ==");
     }
@@ -50,11 +51,9 @@ public class PluginLogger implements IPluginLogger {
     @Override
     public void exception(Exception exception) {
         plugin.getLogger().severe("== ExceptionPublisher Start ==");
-        plugin.getLogger().severe("Exception: " + exception.getMessage());
+        plugin.getLogger().severe("Exception: " + exception);
         plugin.getLogger().severe("Stacktrace:");
-        for (StackTraceElement element : exception.getStackTrace()) {
-            plugin.getLogger().severe(element.toString());
-        }
+        exception.printStackTrace();
         writeToFile(exception);
         plugin.getLogger().severe("== ExceptionPublisher End ==");
     }
@@ -154,11 +153,11 @@ public class PluginLogger implements IPluginLogger {
             writer.write("Timestamp: " + YMDHMS_FORMAT.format(System.currentTimeMillis()) + "\n");
             writer.write("Plugin: " + plugin.getName() + " Version:" + plugin.getDescription().getVersion() + "\n");
             if (exception != null) {
-                writer.write("Exception: " + exception.getMessage() + "\n");
+                writer.write("Exception: " + exception + "\n");
                 writer.write("Stacktrace:\n");
-                for (StackTraceElement element : exception.getStackTrace()) {
-                    writer.write("\t" + element.toString() + "\n");
-                }
+                var printWriter = new java.io.PrintWriter(writer);
+                exception.printStackTrace(printWriter);
+                printWriter.flush();
             }
             if (additionalInfo.length > 0) {
                 writer.write("Additional Info:\n");

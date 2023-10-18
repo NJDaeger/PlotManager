@@ -1,4 +1,4 @@
-package com.njdaeger.plotmanager.plugin.wrappers;
+package com.njdaeger.plotmanager.plugin.commands.wrappers;
 
 import com.njdaeger.pdk.command.CommandBuilder;
 import com.njdaeger.pdk.command.PDKCommand;
@@ -14,7 +14,7 @@ public class CommandBuilderWrapper {
         this.builder = CommandBuilder.of(aliases);
     }
 
-    public static CommandBuilderWrapper of(String aliases) {
+    public static CommandBuilderWrapper of(String... aliases) {
         return new CommandBuilderWrapper(aliases);
     }
 
