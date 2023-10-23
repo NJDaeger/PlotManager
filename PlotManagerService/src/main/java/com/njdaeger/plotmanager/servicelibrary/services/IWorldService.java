@@ -24,6 +24,13 @@ public interface IWorldService extends ITransactionalService {
      */
     CompletableFuture<Result<World>> getWorldByUuid(UUID worldUuid);
 
+    /**
+     * Get a world by its id
+     * @param worldId The id of the world to get
+     * @return A result with the world if successful, or a result with null if the world retrieval was unsuccessful.
+     */
+    CompletableFuture<Result<World>> getWorldById(int worldId);
+
 
     /**
      * Create a world

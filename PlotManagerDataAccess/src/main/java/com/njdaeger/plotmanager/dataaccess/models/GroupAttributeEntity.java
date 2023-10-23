@@ -2,20 +2,16 @@ package com.njdaeger.plotmanager.dataaccess.models;
 
 import com.njdaeger.plotmanager.dataaccess.Identifiable;
 
-public class PlotEntity implements Identifiable {
+public class GroupAttributeEntity implements Identifiable {
 
     @Column
     private int id;
     @Column
-    private Integer parentId;
+    private int groupId;
     @Column
-    private int worldId;
+    private int attributeId;
     @Column
-    private int x;
-    @Column
-    private int y;
-    @Column
-    private int z;
+    private String value;
 
     //auditing fields
     @Column
@@ -29,8 +25,7 @@ public class PlotEntity implements Identifiable {
     @Column
     private Long modified;
 
-
-    public PlotEntity() {}
+    public GroupAttributeEntity() {}
 
     @Override
     public int getId() {
@@ -42,43 +37,36 @@ public class PlotEntity implements Identifiable {
         this.id = id;
     }
 
-    public Integer getParent() {
-        return parentId;
+    public int getAttribute() {
+        return attributeId;
     }
 
-    public int getWorld() {
-        return worldId;
+    public int getGroup() {
+        return groupId;
     }
 
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    public int getCreatedBy() {
-        return createdBy;
+    public String getValue() {
+        return value;
     }
 
     public long getCreated() {
         return created;
     }
 
-    public Integer getModifiedBy() {
-        return modifiedBy;
+    public int getCreatedBy() {
+        return createdBy;
     }
 
     public Long getModified() {
         return modified;
     }
 
+    public Integer getModifiedBy() {
+        return modifiedBy;
+    }
+
     public boolean isDeleted() {
         return deleted;
     }
+
 }

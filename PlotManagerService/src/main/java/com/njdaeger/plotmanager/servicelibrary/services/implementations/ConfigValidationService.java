@@ -64,8 +64,19 @@ public class ConfigValidationService implements Runnable {
         var requiredDefaults = configService.getStringList("plots.required-attributes-defaults");
         var required = configService.getStringList("plots.required-attributes");
         for (var attributeDefault : requiredDefaults) {
+            if (!attributeDefault.contains(":")) {
+                throw new RuntimeException("Required attribute default " + attributeDefault + " is not valid because it is not formatted like attribute:default.");
+            }
             var attributeName = attributeDefault.split(":")[0];
             var attributeDefValue = attributeDefault.split(":")[1];
+
+            if (attributeName.isBlank()) {
+                throw new RuntimeException("Required attribute default " + attributeDefault + " is not valid because the attribute name is blank.");
+            }
+
+            if (attributeDefValue.isBlank()) {
+                throw new RuntimeException("Required attribute default " + attributeDefault + " is not valid because the attribute default value is blank.");
+            }
 
             //does the attribute found here exist?
             var attribute = attributes.stream().filter(a -> a.getName().equalsIgnoreCase(attributeName)).findFirst();

@@ -5,15 +5,14 @@ import com.njdaeger.plotmanager.servicelibrary.Result;
 import com.njdaeger.plotmanager.servicelibrary.models.Attribute;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
 import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
+import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
 import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.njdaeger.plotmanager.dataaccess.Util.await;
 
@@ -22,32 +21,56 @@ public class AttributeService implements IAttributeService {
     private final IServiceTransaction transaction;
     private final IUserService userService;
     private final IConfigService configService;
-    private static final Map<String, Attribute> attributeCache = new ConcurrentHashMap<>();
+    private final ICacheService cacheService;
 
-    public AttributeService(IServiceTransaction transaction, IUserService userService, IConfigService configService) {
+    public AttributeService(IServiceTransaction transaction, IUserService userService, IConfigService configService, ICacheService cacheService) {
         this.transaction = transaction;
         this.userService = userService;
         this.configService = configService;
+        this.cacheService = cacheService;
     }
 
     @Override
     public CompletableFuture<Result<List<Attribute>>> getAttributes() {
         transaction.use();
-        if (!attributeCache.isEmpty()) {
+        if (!cacheService.getAttributeCache().isEmpty()) {
             transaction.release();
-            return CompletableFuture.completedFuture(Result.good(List.copyOf(attributeCache.values())));
+            return CompletableFuture.completedFuture(Result.good(List.copyOf(cacheService.getAttributeCache().values())));
         }
 
         return transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributes().thenApply(attributes -> {
             transaction.release();
-            attributes.forEach(attribute -> attributeCache.put(attribute.getName(), new Attribute(attribute.getId(), attribute.getName(), attribute.getType())));
-            return Result.good(List.copyOf(attributeCache.values()));
+            attributes.forEach(attribute -> cacheService.getAttributeCache().put(attribute.getName(), new Attribute(attribute.getId(), attribute.getName(), attribute.getType())));
+            return Result.good(List.copyOf(cacheService.getAttributeCache().values()));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Result<Attribute>> getAttribute(String name) {
+        transaction.use();
+        if (name == null || name.isBlank()) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Attribute name cannot be null or blank."));
+        }
+        if (cacheService.getAttributeCache().containsKey(name)) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.good(cacheService.getAttributeCache().get(name)));
+        }
+        return transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributeByName(name).thenApply(attribute -> {
+            transaction.release();
+            if (attribute == null) return Result.bad("Failed to find attribute with name " + name + ".");
+            cacheService.getAttributeCache().put(name, new Attribute(attribute.getId(), attribute.getName(), attribute.getType()));
+            return Result.good(cacheService.getAttributeCache().get(name));
         });
     }
 
     @Override
     public CompletableFuture<Result<Attribute>> createAttribute(UUID createdBy, String name, String type) {
         transaction.use();
+        if (createdBy == null) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Creator cannot be null."));
+        }
         if (name == null || name.isBlank()) {
             transaction.release();
             return CompletableFuture.completedFuture(Result.bad("Attribute name cannot be null or blank."));
@@ -56,7 +79,7 @@ public class AttributeService implements IAttributeService {
             transaction.release();
             return CompletableFuture.completedFuture(Result.bad("Attribute type cannot be null or blank."));
         }
-        if (attributeCache.containsKey(name)) {
+        if (cacheService.getAttributeCache().containsKey(name)) {
             transaction.release();
             return CompletableFuture.completedFuture(Result.bad("An attribute with that name already exists."));
         }
@@ -77,7 +100,7 @@ public class AttributeService implements IAttributeService {
             transaction.release();
             if (success == null) return Result.bad("Failed to insert attribute.");
             var attribute = new Attribute(success.getId(), name, type);
-            attributeCache.put(name, attribute);
+            cacheService.getAttributeCache().put(name, attribute);
             return Result.good(attribute);
         });
     }
@@ -85,7 +108,11 @@ public class AttributeService implements IAttributeService {
     @Override
     public CompletableFuture<Result<Attribute>> updateAttributeName(UUID modifiedBy, String oldName, String newName) {
         transaction.use();
-        var oldAttribute = attributeCache.get(oldName);
+        if (modifiedBy == null) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Modifier cannot be null."));
+        }
+        var oldAttribute = cacheService.getAttributeCache().get(oldName);
         if (oldAttribute == null) {
             transaction.release();
             return CompletableFuture.completedFuture(Result.bad("An attribute with that name does not exist."));
@@ -101,8 +128,8 @@ public class AttributeService implements IAttributeService {
             transaction.release();
             if (success == null) return Result.bad("Failed to update attribute.");
             var attribute = new Attribute(success.getId(), newName, success.getType());
-            attributeCache.remove(oldName);
-            attributeCache.put(newName, attribute);
+            cacheService.getAttributeCache().remove(oldName);
+            cacheService.getAttributeCache().put(newName, attribute);
             return Result.good(attribute);
         });
     }
@@ -110,7 +137,11 @@ public class AttributeService implements IAttributeService {
     @Override
     public CompletableFuture<Result<Attribute>> updateAttributeType(UUID modifiedBy, String name, String newType) {
         transaction.use();
-        var oldAttribute = attributeCache.get(name);
+        if (modifiedBy == null) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Modifier cannot be null."));
+        }
+        var oldAttribute = cacheService.getAttributeCache().get(name);
         if (oldAttribute == null) {
             transaction.release();
             return CompletableFuture.completedFuture(Result.bad("An attribute with that name does not exist."));
@@ -126,7 +157,7 @@ public class AttributeService implements IAttributeService {
             transaction.release();
             if (success == null) return Result.bad("Failed to update attribute.");
             var attribute = new Attribute(success.getId(), success.getName(), newType);
-            attributeCache.put(name, attribute);
+            cacheService.getAttributeCache().put(name, attribute);
             return Result.good(attribute);
         });
     }
@@ -134,7 +165,11 @@ public class AttributeService implements IAttributeService {
     @Override
     public CompletableFuture<Result<Attribute>> deleteAttribute(UUID deletedBy, String name) {
         transaction.use();
-        var oldAttribute = attributeCache.get(name);
+        if (deletedBy == null) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Deleter cannot be null."));
+        }
+        var oldAttribute = cacheService.getAttributeCache().get(name);
         if (oldAttribute == null) {
             transaction.release();
             return CompletableFuture.completedFuture(Result.bad("An attribute with that name does not exist."));
@@ -149,7 +184,7 @@ public class AttributeService implements IAttributeService {
         return transaction.getUnitOfWork().repo(IAttributeRepository.class).deleteAttribute(userId, oldAttribute.getId()).thenApply(success -> {
             transaction.release();
             if (success == -1) return Result.bad("Failed to delete attribute.");
-            attributeCache.remove(name);
+            cacheService.getAttributeCache().remove(name);
             return Result.good(oldAttribute);
         });
     }

@@ -1,17 +1,19 @@
 package com.njdaeger.plotmanager.dataaccess.transactional;
 
-import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.plotmanager.dataaccess.IDatabase;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
 import com.njdaeger.plotmanager.dataaccess.IRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.IAttributeRepository;
+import com.njdaeger.plotmanager.dataaccess.repositories.IGroupRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.IPlotRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.IUserRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.IWorldRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.implementations.AttributeRepository;
+import com.njdaeger.plotmanager.dataaccess.repositories.implementations.GroupRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.implementations.PlotRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.implementations.UserRepository;
 import com.njdaeger.plotmanager.dataaccess.repositories.implementations.WorldRepository;
+import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.serviceprovider.IServiceProvider;
 import com.njdaeger.serviceprovider.ServiceProviderBuilder;
 import org.bukkit.plugin.Plugin;
@@ -39,6 +41,7 @@ public class UnitOfWork implements IUnitOfWork {
                 .addSingleton(IUserRepository.class, UserRepository.class)
                 .addSingleton(IWorldRepository.class, WorldRepository.class)
                 .addSingleton(IPlotRepository.class, PlotRepository.class)
+                .addSingleton(IGroupRepository.class, GroupRepository.class)
                 .build(plugin);
         this.database = database;
     }

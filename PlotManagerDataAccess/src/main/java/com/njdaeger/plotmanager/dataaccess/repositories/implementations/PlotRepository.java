@@ -1,92 +1,230 @@
 package com.njdaeger.plotmanager.dataaccess.repositories.implementations;
 
+import com.njdaeger.plotmanager.dataaccess.IProcedure;
 import com.njdaeger.plotmanager.dataaccess.models.PlotAttributeEntity;
 import com.njdaeger.plotmanager.dataaccess.models.PlotEntity;
-import com.njdaeger.plotmanager.dataaccess.models.GroupEntity;
 import com.njdaeger.plotmanager.dataaccess.repositories.IPlotRepository;
+import com.njdaeger.plotmanager.dataaccess.transactional.AbstractDatabaseTransaction;
+import com.njdaeger.pluginlogger.IPluginLogger;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.njdaeger.plotmanager.dataaccess.Util.await;
+
 public class PlotRepository implements IPlotRepository {
+
+    private final IPluginLogger logger;
+    private final AbstractDatabaseTransaction<?> transaction;
+    private final IProcedure procedures;
+
+    public PlotRepository(IPluginLogger logger, IProcedure procedures, AbstractDatabaseTransaction<?> transaction) {
+        this.logger = logger;
+        this.transaction = transaction;
+        this.procedures = procedures;
+        await(initializeRepository());
+    }
 
     @Override
     public CompletableFuture<Boolean> initializeRepository() {
-        return null;
+        return CompletableFuture.supplyAsync(() -> true);
     }
 
     @Override
     public CompletableFuture<List<PlotEntity>> getPlots() {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlots();
+                return transaction.query(proc.getFirst(), PlotEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return List.of();
+            }
+        });
     }
 
     @Override
     public CompletableFuture<PlotEntity> getPlotById(int plotId) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlotById(plotId);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
     }
 
     @Override
     public CompletableFuture<PlotEntity> insertPlot(int createdBy, int worldId, int x, int y, int z) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.insertPlot(createdBy, worldId, x, y, z);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotById(id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
     }
 
     @Override
-    public CompletableFuture<PlotEntity> updatePlot(int updatedBy, int plotId, Integer newWorldId, Integer newX, Integer newY, Integer newZ) {
-        return null;
+    public CompletableFuture<PlotEntity> updatePlotLocation(int updatedBy, int plotId, Integer newWorldId, Integer newX, Integer newY, Integer newZ) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.updatePlotLocation(updatedBy, plotId, newWorldId, newX, newY, newZ);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotById(id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotEntity> updatePlotParent(int updatedBy, int plotId, Integer newParentId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.updatePlotParent(updatedBy, plotId, newParentId);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotById(id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotEntity> updatePlotGroup(int updatedBy, int plotId, Integer newGroupId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.updatePlotGroup(updatedBy, plotId, newGroupId);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotById(id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotEntity> insertPlotUser(int insertedBy, int plotId, int userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.insertPlotUser(insertedBy, plotId, userId);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotById(id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotEntity> deletePlotUser(int deletedBy, int plotId, int userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.deletePlotUser(deletedBy, plotId, userId);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotById(id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
     }
 
     @Override
     public CompletableFuture<Integer> deletePlot(int deletedBy, int plotId) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.deletePlot(deletedBy, plotId);
+                return transaction.execute(proc.getFirst(), proc.getSecond());
+            } catch (Exception e) {
+                logger.exception(e);
+                return -1;
+            }
+        });
     }
 
     @Override
     public CompletableFuture<List<PlotAttributeEntity>> getPlotAttributesForPlot(int plotId) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlotAttributesForPlot(plotId);
+                return transaction.query(proc.getFirst(), PlotAttributeEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return List.of();
+            }
+        });
     }
 
     @Override
     public CompletableFuture<PlotAttributeEntity> getPlotAttributeForPlot(int plotId, int attributeId) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlotAttributeForPlot(plotId, attributeId);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotAttributeEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
     }
 
     @Override
     public CompletableFuture<PlotAttributeEntity> insertPlotAttribute(int createdBy, int plotId, int attributeId, String value) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.insertPlotAttribute(createdBy, plotId, attributeId, value);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotAttributeForPlot(plotId, id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
     }
 
     @Override
     public CompletableFuture<PlotAttributeEntity> updatePlotAttribute(int updatedBy, int plotId, Integer attributeId, String value) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.updatePlotAttribute(updatedBy, plotId, attributeId, value);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == -1) return null;
+                return await(getPlotAttributeForPlot(plotId, id));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
     }
 
     @Override
     public CompletableFuture<Integer> deletePlotAttribute(int deletedBy, int plotId, int attributeId) {
-        return null;
-    }
-
-    @Override
-    public CompletableFuture<List<GroupEntity>> getPlotGroups() {
-        return null;
-    }
-
-    @Override
-    public CompletableFuture<GroupEntity> getPlotGroupById(int plotGroupId) {
-        return null;
-    }
-
-    @Override
-    public CompletableFuture<GroupEntity> insertPlotGroup(int createdBy, String groupName) {
-        return null;
-    }
-
-    @Override
-    public CompletableFuture<GroupEntity> updatePlotGroup(int updatedBy, int plotGroupid, String newPlotGroupName) {
-        return null;
-    }
-
-    @Override
-    public CompletableFuture<Integer> deletePlotGroup(int deletedBy, int plotGroupId) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.deletePlotAttribute(deletedBy, plotId, attributeId);
+                return transaction.execute(proc.getFirst(), proc.getSecond());
+            } catch (Exception e) {
+                logger.exception(e);
+                return -1;
+            }
+        });
     }
 }

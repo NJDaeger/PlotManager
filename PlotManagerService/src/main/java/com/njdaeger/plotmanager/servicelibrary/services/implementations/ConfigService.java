@@ -3,12 +3,15 @@ package com.njdaeger.plotmanager.servicelibrary.services.implementations;
 import com.njdaeger.pdk.config.ConfigType;
 import com.njdaeger.pdk.config.Configuration;
 import com.njdaeger.plotmanager.dataaccess.DatabaseType;
+import com.njdaeger.plotmanager.servicelibrary.models.Attribute;
 import com.njdaeger.plotmanager.servicelibrary.models.AttributeType;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
 import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ConfigService extends Configuration implements IConfigService {
 
@@ -59,7 +62,7 @@ public class ConfigService extends Configuration implements IConfigService {
         addEntry("attributes.types.points", List.of("1", "2", "3", "5", "8", "13", "21"));
         addEntry("attributes.types.building-type", List.of("Apartment Complex", "Strip Mall", "Office Building", "House", "Store Interior", "Undefined"));
         addEntry("plots.required-attributes", List.of("status", "rank", "points", "building-type", "description", "floors"));
-        addEntry("plots.required-attribute-defaults", List.of("status:Hold", "rank:Apprentice", "points:1", "building-type:Undefined", "floors:1"));
+        addEntry("plots.required-attribute-defaults", List.of("status:Draft", "rank:Apprentice", "points:1", "building-type:Undefined", "floors:1"));
 
         save();
     }
@@ -75,13 +78,16 @@ public class ConfigService extends Configuration implements IConfigService {
     }
 
     @Override
-    public List<AttributeType> getRequiredPlotAttributes() {
-        var required = getStringList("plots.attributes.required");
-        var types = new ArrayList<AttributeType>();
-        for (var requiredAttribute : required) {
-            types.add(getAttributeType(requiredAttribute));
-        }
-        return types;
+    public List<String> getRequiredPlotAttributes() {
+        return getStringList("plots.required-attributes");
+    }
+
+    @Override
+    public Map<String, String> getRequiredPlotAttributeDefaults() {
+        return getStringList("plots.required-attribute-defaults").stream().map(str -> {
+            var split = str.split(":");
+            return new String[] { split[0], split[1] };
+        }).collect(HashMap::new, (map, def) -> map.put(def[0], def[1]), Map::putAll);
     }
 
     @Override

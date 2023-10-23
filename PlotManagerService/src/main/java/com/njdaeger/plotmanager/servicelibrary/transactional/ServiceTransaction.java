@@ -1,6 +1,9 @@
 package com.njdaeger.plotmanager.servicelibrary.transactional;
 
+import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
+import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
+import com.njdaeger.plotmanager.servicelibrary.services.implementations.PlotService;
 import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.plotmanager.dataaccess.transactional.IUnitOfWork;
 import com.njdaeger.plotmanager.servicelibrary.services.implementations.AttributeService;
@@ -27,12 +30,13 @@ public class ServiceTransaction implements IServiceTransaction {
     private final AtomicInteger refCount = new AtomicInteger(0);
     private final AtomicBoolean canClose = new AtomicBoolean(false);
 
-    public ServiceTransaction(IServiceProvider pluginServiceProvider, Plugin plugin, IPluginLogger logger, IConfigService configService) {
+    public ServiceTransaction(IServiceProvider pluginServiceProvider, Plugin plugin, IPluginLogger logger, IConfigService configService, ICacheService cacheService) {
         this.logger = logger;
         this.transactionId = UUID.randomUUID();
         logger.debug("Transaction created: " + transactionId);
         this.pluginServiceProvider = pluginServiceProvider;
         this.serviceProvider = ServiceProviderBuilder.builder()
+                .addSingleton(ICacheService.class, (s) -> cacheService)
                 .addSingleton(IConfigService.class, (s) -> configService)
                 .addSingleton(IServiceTransaction.class, (s) -> this)
                 .addSingleton(Plugin.class, (s) -> plugin)
@@ -40,6 +44,7 @@ public class ServiceTransaction implements IServiceTransaction {
                 .addSingleton(IAttributeService.class, AttributeService.class)
                 .addSingleton(IUserService.class, UserService.class)
                 .addSingleton(IWorldService.class, WorldService.class)
+                .addSingleton(IPlotService.class, PlotService.class)
                 .build(plugin);
     }
 

@@ -10,6 +10,7 @@ import com.njdaeger.pdk.utils.text.pager.ChatPaginator;
 import com.njdaeger.pdk.utils.text.pager.ComponentPosition;
 import com.njdaeger.pdk.utils.text.pager.components.PageNavigationComponent;
 import com.njdaeger.pdk.utils.text.pager.components.ResultCountComponent;
+import com.njdaeger.plotmanager.servicelibrary.ColorUtils;
 import com.njdaeger.plotmanager.plugin.IPlotManagerPlugin;
 import com.njdaeger.plotmanager.plugin.commands.flags.PageFlag;
 import com.njdaeger.plotmanager.plugin.commands.wrappers.CommandBuilderWrapper;
@@ -20,7 +21,6 @@ import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 import com.njdaeger.serviceprovider.IServiceProvider;
-import org.bukkit.ChatColor;
 
 import static com.njdaeger.plotmanager.dataaccess.Util.await;
 
@@ -49,19 +49,13 @@ public class AttributeCommands {
                 .register(plugin);
 
         this.attributeListPaginator = ChatPaginator.<Attribute, CommandContextWrapper>builder((attr, ctx) ->
-                Text.of("| ")
-                        .setColor(ChatColor.GRAY)
-                        .setBold(true)
-                    .appendRoot(attr.getName())
-                        .setColor(ChatColor.LIGHT_PURPLE)
-                    .appendRoot(" (")
-                        .setColor(ChatColor.GRAY)
-                    .appendRoot(attr.getType())
-                        .setColor(ChatColor.LIGHT_PURPLE)
-                    .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ChatColor.GRAY))
+                Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
+                    .appendRoot(attr.getName()).setColor(ColorUtils.HIGHLIGHT_TEXT)
+                    .appendRoot(" (").setColor(ColorUtils.REGULAR_TEXT)
+                    .appendRoot(attr.getType()).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + attr.getType()))
-                    .appendRoot(")")
-                        .setColor(ChatColor.GRAY))
+                    .appendRoot(")").setColor(ColorUtils.REGULAR_TEXT))
                 .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
@@ -69,16 +63,16 @@ public class AttributeCommands {
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg + 1),
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + ((int) Math.ceil(res.size() / 8.0))
                 ), ComponentPosition.BOTTOM_CENTER)
-                .addComponent(Text.of("Attribute List").setColor(ChatColor.LIGHT_PURPLE), ComponentPosition.TOP_CENTER)
+                .addComponent(Text.of("Attribute List").setColor(ColorUtils.HIGHLIGHT_TEXT), ComponentPosition.TOP_CENTER)
+                .setGrayColor(ColorUtils.REGULAR_TEXT)
+                .setHighlightColor(ColorUtils.HIGHLIGHT_TEXT)
+                .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
                 .build();
 
         this.attributeTypeListPaginator = ChatPaginator.<AttributeType, CommandContextWrapper>builder((type, ctx) ->
-                Text.of("| ")
-                        .setColor(ChatColor.GRAY)
-                        .setBold(true)
-                    .appendRoot(type.getName())
-                        .setColor(ChatColor.LIGHT_PURPLE)
-                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ChatColor.GRAY))
+                Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
+                    .appendRoot(type.getName()).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + type.getName())))
                 .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
@@ -87,15 +81,15 @@ public class AttributeCommands {
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg + 1),
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + ((int) Math.ceil(res.size() / 8.0))
                 ), ComponentPosition.BOTTOM_CENTER)
-                .addComponent(Text.of("Attribute Type List").setColor(ChatColor.LIGHT_PURPLE), ComponentPosition.TOP_CENTER)
+                .addComponent(Text.of("Attribute Type List").setColor(ColorUtils.HIGHLIGHT_TEXT), ComponentPosition.TOP_CENTER)
+                .setGrayColor(ColorUtils.REGULAR_TEXT)
+                .setHighlightColor(ColorUtils.HIGHLIGHT_TEXT)
+                .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
                 .build();
 
         this.attributeValueListPaginator = ChatPaginator.<String, CommandContextWrapper>builder((value, ctx) ->
-                Text.of("| ")
-                        .setColor(ChatColor.GRAY)
-                        .setBold(true)
-                    .appendRoot(value)
-                        .setColor(ChatColor.LIGHT_PURPLE))
+                Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
+                    .appendRoot(value).setColor(ColorUtils.HIGHLIGHT_TEXT))
                 .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
@@ -103,7 +97,10 @@ public class AttributeCommands {
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg + 1),
                         (ctx, res, pg) -> "/attribute " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + ((int) Math.ceil(res.size() / 8.0))
                 ), ComponentPosition.BOTTOM_CENTER)
-                .addComponent(Text.of("Attribute Value List").setColor(ChatColor.LIGHT_PURPLE), ComponentPosition.TOP_CENTER)
+                .addComponent(Text.of("Attribute Value List").setColor(ColorUtils.HIGHLIGHT_TEXT), ComponentPosition.TOP_CENTER)
+                .setGrayColor(ColorUtils.REGULAR_TEXT)
+                .setHighlightColor(ColorUtils.HIGHLIGHT_TEXT)
+                .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
                 .build();
     }
 
@@ -142,16 +139,16 @@ public class AttributeCommands {
         var type = context.argAtOrThrow(3, "You must specify a type for the attribute.");
         var attrib = await(attribServ.createAttribute(context.getUUID(), name, type));
         if (attrib.successful()) {
-            context.send(Text.of("[PlotManager] ").setColor(ChatColor.LIGHT_PURPLE)
-                    .appendRoot("Attribute ").setColor(ChatColor.GRAY)
-                    .appendRoot(name).setColor(ChatColor.LIGHT_PURPLE)
-                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view all attributes").setColor(ChatColor.GRAY))
-                        .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list"))
-                    .appendRoot(" created using type ").setColor(ChatColor.GRAY)
-                    .appendRoot(type).setColor(ChatColor.LIGHT_PURPLE)
-                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ChatColor.GRAY))
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT)
+                    .appendRoot("Attribute ").setColor(ColorUtils.REGULAR_TEXT)
+                    .appendRoot(name).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view all attributes").setColor(ColorUtils.REGULAR_TEXT))
+                        .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list attributes"))
+                    .appendRoot(" created using type ").setColor(ColorUtils.REGULAR_TEXT)
+                    .appendRoot(type).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + type))
-                    .appendRoot(".").setColor(ChatColor.GRAY)
+                    .appendRoot(".").setColor(ColorUtils.REGULAR_TEXT)
             );
         } else context.error(attrib.message());
     }
@@ -200,10 +197,10 @@ public class AttributeCommands {
         var name = context.argAtOrThrow(2, "You must specify a name for the attribute.");
         var res = await(attributeServ.deleteAttribute(deleter, name));
         if (res.successful()) {
-            context.send(Text.of("[PlotManager] ").setColor(ChatColor.LIGHT_PURPLE)
-                    .appendRoot("Attribute ").setColor(ChatColor.GRAY)
-                    .appendRoot(name).setColor(ChatColor.LIGHT_PURPLE)
-                    .appendRoot(" deleted.").setColor(ChatColor.GRAY)
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT)
+                    .appendRoot("Attribute ").setColor(ColorUtils.REGULAR_TEXT)
+                    .appendRoot(name).setColor(ColorUtils.HIGHLIGHT_TEXT)
+                    .appendRoot(" deleted.").setColor(ColorUtils.REGULAR_TEXT)
             );
         } else context.error(res.message());
 

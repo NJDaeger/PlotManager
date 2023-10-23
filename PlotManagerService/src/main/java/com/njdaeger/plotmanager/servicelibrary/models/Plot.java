@@ -7,14 +7,15 @@ import java.util.UUID;
 
 public class Plot {
 
+    private final int id;
     private Plot parent;
     private PlotGroup plotGroup;
     private Location location;
     private List<PlotAttribute> attributes;
     private List<User> users;
-    //name, description, status, type are all attributes
 
-    public Plot(Location location, List<PlotAttribute> attributes, List<User> users, Plot parent, PlotGroup plotGroup) {
+    public Plot(int id, Location location, List<PlotAttribute> attributes, List<User> users, Plot parent, PlotGroup plotGroup) {
+        this.id = id;
         this.location = location;
         this.attributes = attributes;
         this.users = users;
@@ -38,6 +39,10 @@ public class Plot {
         return parent;
     }
 
+    public PlotGroup getPlotGroup() {
+        return plotGroup;
+    }
+
     public List<User> getUsers() {
         return users;
     }
@@ -46,4 +51,7 @@ public class Plot {
         return users.stream().filter(user -> user.getUserId().equals(userId)).findFirst().orElse(null);
     }
 
+    public int getId() {
+        return id;
+    }
 }

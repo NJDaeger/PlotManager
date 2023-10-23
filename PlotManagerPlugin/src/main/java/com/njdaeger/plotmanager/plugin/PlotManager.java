@@ -1,6 +1,9 @@
 package com.njdaeger.plotmanager.plugin;
 
 import com.njdaeger.plotmanager.plugin.commands.AttributeCommands;
+import com.njdaeger.plotmanager.plugin.commands.PlotCommands;
+import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
+import com.njdaeger.plotmanager.servicelibrary.services.implementations.CacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.implementations.ConfigValidationService;
 import com.njdaeger.plotmanager.servicelibrary.services.implementations.InitializationService;
 import com.njdaeger.pluginlogger.PluginLogger;
@@ -39,6 +42,7 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
                 .addSingleton(IConfigService.class, ConfigService.class)
                 .addSingleton(IConfig.class, (sp) -> sp.getRequiredService(IConfigService.class))
                 .addSingleton(IPluginLogger.class, PluginLogger.class)
+                .addSingleton(ICacheService.class, CacheService.class)
                 .addSingleton(IProcedure.class, (sp) -> {
                     var type = sp.getRequiredService(IConfigService.class).getDatabaseType();
                     if (type == null) throw new RuntimeException("Database type is null.");
@@ -77,6 +81,7 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
         serviceProvider.initialize(InitializationService.class).run();
         serviceProvider.initialize(ConfigValidationService.class).run();
         serviceProvider.initialize(AttributeCommands.class);
+        serviceProvider.initialize(PlotCommands.class);
         serviceProvider.initialize(PlotManagerListener.class);
     }
 

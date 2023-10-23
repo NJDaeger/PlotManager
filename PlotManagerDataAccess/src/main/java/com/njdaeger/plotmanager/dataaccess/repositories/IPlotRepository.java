@@ -44,7 +44,43 @@ public interface IPlotRepository extends IRepository {
      * @param newZ The new z coordinate of the plot, or null to not update the z coordinate
      * @return The updated plot, or null if no plot was updated
      */
-    CompletableFuture<PlotEntity> updatePlot(int updatedBy, int plotId, Integer newWorldId, Integer newX, Integer newY, Integer newZ);
+    CompletableFuture<PlotEntity> updatePlotLocation(int updatedBy, int plotId, Integer newWorldId, Integer newX, Integer newY, Integer newZ);
+
+    /**
+     * Update a plot's parent
+     * @param updatedBy The id of the user who updated this plot
+     * @param plotId The id of the plot to update
+     * @param newParentId The new parent id of the plot, or null to not update the parent id
+     * @return The updated plot, or null if no plot was updated
+     */
+    CompletableFuture<PlotEntity> updatePlotParent(int updatedBy, int plotId, Integer newParentId);
+
+    /**
+     * Update a plot's group
+     * @param updatedBy The id of the user who updated this plot
+     * @param plotId The id of the plot to update
+     * @param newGroupId The new group id of the plot, or null remove the plot from its group
+     * @return The updated plot, or null if no plot was updated
+     */
+    CompletableFuture<PlotEntity> updatePlotGroup(int updatedBy, int plotId, Integer newGroupId);
+
+    /**
+     * Adds a user to a plot
+     * @param insertedBy The id of the user who inserted this plot user
+     * @param plotId The id of the plot to insert the user into
+     * @param userId The id of the user to insert into the plot
+     * @return The updated plot, or null if no plot was updated
+     */
+    CompletableFuture<PlotEntity> insertPlotUser(int insertedBy, int plotId, int userId);
+
+    /**
+     * Removes a user from a plot
+     * @param deletedBy The id of the user who deleted this plot user
+     * @param plotId The id of the plot to delete the user from
+     * @param userId The id of the user to delete from the plot
+     * @return The updated plot, or null if no plot was updated
+     */
+    CompletableFuture<PlotEntity> deletePlotUser(int deletedBy, int plotId, int userId);
 
     /**
      * Delete a plot
@@ -97,43 +133,5 @@ public interface IPlotRepository extends IRepository {
      * @return The deleted attribute id, or null if no attribute was deleted
      */
     CompletableFuture<Integer> deletePlotAttribute(int deletedBy, int plotId, int attributeId);
-
-    /**
-     * Get all plot groups
-     * @return A list of plot groups
-     */
-    CompletableFuture<List<GroupEntity>> getPlotGroups();
-
-    /**
-     * Get a plot groups by id
-     * @param plotGroupId The id of the plot group
-     * @return The plot group
-     */
-    CompletableFuture<GroupEntity> getPlotGroupById(int plotGroupId);
-
-    /**
-     * Insert a plot group
-     * @param createdBy The id of the user who created this plot group
-     * @param groupName The name of the plot group
-     * @return The newly created plot group, or null if no plot group was created
-     */
-    CompletableFuture<GroupEntity> insertPlotGroup(int createdBy, String groupName);
-
-    /**
-     * Update a plot group
-     * @param updatedBy The id of the user who updated this plot group
-     * @param plotGroupid The id of the plot group to update
-     * @param newPlotGroupName The new plot group name
-     * @return The updated plot group, or null if no plot group was updated
-     */
-    CompletableFuture<GroupEntity> updatePlotGroup(int updatedBy, int plotGroupid, String newPlotGroupName);
-
-    /**
-     * Delete a plot group
-     * @param deletedBy The id of the user who deleted this plot group
-     * @param plotGroupId The id of the plot group to delete
-     * @return The deleted plot group id, or -1 if no plot group was deleted
-     */
-    CompletableFuture<Integer> deletePlotGroup(int deletedBy, int plotGroupId);
 
 }

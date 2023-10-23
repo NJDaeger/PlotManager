@@ -3,50 +3,50 @@ package com.njdaeger.plotmanager.servicelibrary.services.implementations;
 import com.njdaeger.plotmanager.dataaccess.repositories.IUserRepository;
 import com.njdaeger.plotmanager.servicelibrary.Result;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
+import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.njdaeger.plotmanager.dataaccess.Util.await;
 
 public class UserService implements IUserService {
 
     private final IServiceTransaction transaction;
-    private static final Map<UUID, User> userCache = new ConcurrentHashMap<>();
+    private final ICacheService cacheService;
 
-    public UserService(IServiceTransaction transaction) {
+    public UserService(IServiceTransaction transaction, ICacheService cacheService) {
         this.transaction = transaction;
+        this.cacheService = cacheService;
     }
 
     @Override
     public CompletableFuture<Result<List<User>>> getUsers() {
         transaction.use();
-        if (!userCache.isEmpty()) {
+        if (!cacheService.getUserCache().isEmpty()) {
             transaction.release();
-            return CompletableFuture.completedFuture(Result.good(List.copyOf(userCache.values())));
+            return CompletableFuture.completedFuture(Result.good(List.copyOf(cacheService.getUserCache().values())));
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).getUsers().thenApply(users -> {
             transaction.release();
             users.forEach(user -> {
                 var uuid = UUID.fromString(user.getUuid());
-                userCache.put(uuid, new User(user.getId(), uuid, user.getUsername()));
+                cacheService.getUserCache().put(uuid, new User(user.getId(), uuid, user.getUsername()));
             });
-            return Result.good(List.copyOf(userCache.values()));
+            return Result.good(List.copyOf(cacheService.getUserCache().values()));
         });
     }
 
     @Override
     public CompletableFuture<Result<User>> getUserByUuid(UUID userId) {
         transaction.use();
-        if (userCache.containsKey(userId)) {
+        if (cacheService.getUserCache().containsKey(userId)) {
             transaction.release();
-            return CompletableFuture.completedFuture(Result.good(userCache.get(userId)));
+            return CompletableFuture.completedFuture(Result.good(cacheService.getUserCache().get(userId)));
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).getUserByUuid(userId).thenApply(user -> {
@@ -54,7 +54,7 @@ public class UserService implements IUserService {
             if (user == null) return Result.bad("User not found.");
             var uuid = UUID.fromString(user.getUuid());
             var newUser = new User(user.getId(), uuid, user.getUsername());
-            userCache.put(uuid, newUser);
+            cacheService.getUserCache().put(uuid, newUser);
             return Result.good(newUser);
         });
     }
@@ -62,25 +62,25 @@ public class UserService implements IUserService {
     @Override
     public CompletableFuture<Result<List<User>>> getUserByName(String username) {
         transaction.use();
-        if (userCache.values().stream().anyMatch(user -> user.getLastKnownName().equalsIgnoreCase(username))) {
+        if (cacheService.getUserCache().values().stream().anyMatch(user -> user.getLastKnownName().equalsIgnoreCase(username))) {
             transaction.release();
-            return CompletableFuture.completedFuture(Result.good(List.copyOf(userCache.values())));
+            return CompletableFuture.completedFuture(Result.good(List.copyOf(cacheService.getUserCache().values())));
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).getUsersByUsername(username).thenApply(users -> {
             transaction.release();
             users.forEach(user -> {
                 var uuid = UUID.fromString(user.getUuid());
-                userCache.put(uuid, new User(user.getId(), uuid, user.getUsername()));
+                cacheService.getUserCache().put(uuid, new User(user.getId(), uuid, user.getUsername()));
             });
-            return Result.good(List.copyOf(userCache.values()));
+            return Result.good(List.copyOf(cacheService.getUserCache().values()));
         });
     }
 
     @Override
     public CompletableFuture<Result<User>> createUser(UUID createdBy, UUID newUserUuid, String newUserUsername) {
         transaction.use();
-        if (userCache.containsKey(newUserUuid)) {
+        if (cacheService.getUserCache().containsKey(newUserUuid)) {
             transaction.release();
             return CompletableFuture.completedFuture(Result.bad("User already exists."));
         }
@@ -95,7 +95,7 @@ public class UserService implements IUserService {
             transaction.release();
             if (user == null) return Result.bad("Failed to create user.");
             var newUser = new User(user.getId(), newUserUuid, user.getUsername());
-            userCache.put(newUserUuid, newUser);
+            cacheService.getUserCache().put(newUserUuid, newUser);
             return Result.good(newUser);
         });
     }
@@ -119,7 +119,7 @@ public class UserService implements IUserService {
             transaction.release();
             if (user == null) return Result.bad("Failed to update user.");
             var newUser = new User(user.getId(), userId, user.getUsername());
-            userCache.put(userId, newUser);
+            cacheService.getUserCache().put(userId, newUser);
             return Result.good(newUser);
         });
     }
@@ -143,7 +143,7 @@ public class UserService implements IUserService {
             transaction.release();
             if (user == null) return Result.bad("Failed to update user.");
             var newUser = new User(user.getId(), newUserId, user.getUsername());
-            userCache.put(newUserId, newUser);
+            cacheService.getUserCache().put(newUserId, newUser);
             return Result.good(newUser);
         });
     }
@@ -166,7 +166,7 @@ public class UserService implements IUserService {
         return transaction.getUnitOfWork().repo(IUserRepository.class).deleteUser(deletedById, oldUser.getId()).thenApply(user -> {
             transaction.release();
             if (user == -1) return Result.bad("Failed to delete user.");
-            userCache.remove(uuidOfUserToDelete);
+            cacheService.getUserCache().remove(uuidOfUserToDelete);
             return Result.good(oldUser);
         });
     }

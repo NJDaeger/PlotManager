@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS PlotAttribute
     CONSTRAINT PlotAttribute_pk PRIMARY KEY (id),
     CONSTRAINT PlotAttribute_createdBy_fk FOREIGN KEY (createdBy) REFERENCES User (id),
     CONSTRAINT PlotAttribute_modifiedBy_fk FOREIGN KEY (modifiedBy) REFERENCES User (id),
+    CONSTRAINT PlotAttribute_attributeId_fk FOREIGN KEY (attributeId) REFERENCES Attribute (id),
     CONSTRAINT PlotAttribute_plotId_fk FOREIGN KEY (plotId) REFERENCES Plot (id),
     CONSTRAINT PlotAttribute_plotId_attributeId_uc UNIQUE (plotId, attributeId)
 )

@@ -75,6 +75,18 @@ public class Result<T> {
     }
 
     /**
+     * Get the result or throw an exception.
+     * @param ex The exception to throw.
+     * @param <E> The type of the exception.
+     * @return The result.
+     * @throws E The exception.
+     */
+    public <E extends Throwable> T getOrThrow(E ex) throws E {
+        if (successful) return result;
+        throw ex;
+    }
+
+    /**
      * Check if this result was successful.
      * @return True if this result was successful, false otherwise.
      */

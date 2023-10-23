@@ -7,6 +7,7 @@ import com.njdaeger.plotmanager.plugin.IPlotManagerPlugin;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 import com.njdaeger.pluginlogger.IPluginLogger;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 
 public interface TransactionalCommandExecutor extends CommandExecutor {
 
@@ -17,7 +18,7 @@ public interface TransactionalCommandExecutor extends CommandExecutor {
             try (var transaction = sp.getRequiredService(IServiceTransaction.class)) {
                 this.execute(transaction, new CommandContextWrapper(context));
             } catch (PDKCommandException e) {
-                e.showError(context.getSender());
+                context.send(ChatColor.RED + e.getMessage());
             } catch (Exception e) {
                 sp.getRequiredService(IPluginLogger.class).exception(e);
             }

@@ -1,6 +1,5 @@
 package com.njdaeger.plotmanager.dataaccess.databases.mysql;
 
-import com.google.common.base.Verify;
 import com.njdaeger.pdk.utils.Pair;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
 import com.njdaeger.plotmanager.dataaccess.Util;
@@ -218,7 +217,7 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
-    public Pair<String, Map<String, Object>> updatePlot(int modifiedBy, int plotId, Integer newWorldId, Integer newX, Integer newY, Integer newZ) {
+    public Pair<String, Map<String, Object>> updatePlotLocation(int modifiedBy, int plotId, Integer newWorldId, Integer newX, Integer newY, Integer newZ) {
         var queryBuilder = new StringBuilder("update Plot set modifiedBy = ?");
         var map = new HashMap<String, Object>();
         map.put("1", modifiedBy);
@@ -252,6 +251,55 @@ public class MySqlProcedures implements IProcedure {
         map.put(String.valueOf(currentParam), plotId);
 
         return Pair.of(queryBuilder.toString(), map);
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> updatePlotParent(int modifiedBy, int plotId, Integer newParentId) {
+        if (newParentId == null) {
+            return Pair.of("update Plot set parentId = null, modifiedBy = ? where id = ?", Map.of(
+                    "1", modifiedBy,
+                    "2", plotId
+            ));
+        } else {
+            return Pair.of("update Plot set parentId = ?, modifiedBy = ? where id = ?", Map.of(
+                    "1", newParentId,
+                    "2", modifiedBy,
+                    "3", plotId
+            ));
+        }
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> updatePlotGroup(int modifiedBy, int plotId, Integer newGroupId) {
+        if (newGroupId == null) {
+            return Pair.of("update Plot set groupId = null, modifiedBy = ? where id = ?", Map.of(
+                    "1", modifiedBy,
+                    "2", plotId
+            ));
+        } else {
+            return Pair.of("update Plot set groupId = ?, modifiedBy = ? where id = ?", Map.of(
+                    "1", newGroupId,
+                    "2", modifiedBy,
+                    "3", plotId
+            ));
+        }
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> insertPlotUser(int insertedBy, int plotId, int userId) {
+        return Pair.of("insert into PlotUsers (plotId, userId, createdBy) values (?, ?, ?)", Map.of(
+                "1", plotId,
+                "2", userId,
+                "3", insertedBy
+        ));
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> deletePlotUser(int deletedBy, int plotId, int userId) {
+        return Pair.of("delete from PlotUsers where plotId = ? and userId = ?", Map.of(
+                "1", plotId,
+                "2", userId
+        ));
     }
 
     @Override

@@ -5,6 +5,7 @@ public class PlotAttribute {
     private final String attribute;
     private final String value;
 
+    //todo: rename to AttributeValue
     public PlotAttribute(String attribute, String value) {
         this.value = value;
         this.attribute = attribute;
