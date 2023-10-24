@@ -52,7 +52,7 @@ public class Util {
 
     public static <R> R await(CompletableFuture<R> future) {
         try {
-            return future.get();
+            return future.join();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

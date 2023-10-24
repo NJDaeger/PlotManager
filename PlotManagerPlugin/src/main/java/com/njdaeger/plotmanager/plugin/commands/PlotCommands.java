@@ -28,8 +28,12 @@ import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
 import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 import com.njdaeger.serviceprovider.IServiceProvider;
+import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 
 import static com.njdaeger.plotmanager.dataaccess.Util.await;
 
@@ -57,7 +61,7 @@ public class PlotCommands {
                 .flag(new ReferenceFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("create")))
                 .flag(new PlotGroupFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("create")))
                 .flag(new SessionFlag(ctx -> ctx.argAt(0).equalsIgnoreCase("edit") || ctx.argAt(0).equalsIgnoreCase("create")))
-                .flag(new PlotFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("edit")))
+                .flag(new PlotFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("edit") && !ctx.hasFlag("session")))
                 .flag(new PageFlag(ctx -> ctx.argAt(0).equalsIgnoreCase("create") || ctx.argAt(0).equalsIgnoreCase("edit") &&
                         ((ctx.hasArgAt(1) && ctx.argAt(1).equalsIgnoreCase("attribute") && ctx.hasArgAt(3) && ctx.argAt(3).equalsIgnoreCase("select")) ||
                         (ctx.hasArgAt(1) && ctx.argAt(1).equalsIgnoreCase("parent") && ctx.hasArgAt(2) && ctx.argAt(2).equalsIgnoreCase("select")))))
@@ -69,9 +73,19 @@ public class PlotCommands {
                 var editSession = ctx.hasFlag("session");
                 return Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
                         .appendRoot(String.valueOf(plt.getId())).setColor(ColorUtils.HIGHLIGHT_TEXT)
-                        .setHoverEvent(HoverAction.SHOW_TEXT, Text.of(plt.getAttribute("description").getValue()).setColor(ColorUtils.REGULAR_TEXT))
+                        .setHoverEvent(HoverAction.SHOW_TEXT,
+                                Text.of("Description: ").setColor(ColorUtils.REGULAR_TEXT)
+                                        .appendRoot(plt.getAttribute("description") == null ? "No description provided." : plt.getAttribute("description").getValue()).setColor(ColorUtils.HIGHLIGHT_TEXT)
+                                        .appendRoot("\nLocation: ").setColor(ColorUtils.REGULAR_TEXT)
+                                        .appendRoot(String.valueOf(plt.getLocation().getBlockX())).setColor(ColorUtils.HIGHLIGHT_TEXT)
+                                        .appendRoot(", ").setColor(ColorUtils.REGULAR_TEXT)
+                                        .appendRoot(String.valueOf(plt.getLocation().getBlockY())).setColor(ColorUtils.HIGHLIGHT_TEXT)
+                                        .appendRoot(", ").setColor(ColorUtils.REGULAR_TEXT)
+                                        .appendRoot(String.valueOf(plt.getLocation().getBlockZ())).setColor(ColorUtils.HIGHLIGHT_TEXT)
+                                        .appendRoot("\nWorld: ").setColor(ColorUtils.REGULAR_TEXT)
+                                        .appendRoot(plt.getLocation().getWorld().getName()).setColor(ColorUtils.HIGHLIGHT_TEXT))
                         .appendRoot(" ")
-                        .appendRoot("[select]").setBold(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
+                        .appendRoot("[select]").setItalic(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to select this plot to be the parent.").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot edit parent set " + plt.getId() + (editSession ? " -session" : "")));
                 })
@@ -92,7 +106,7 @@ public class PlotCommands {
                         Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
                                 .appendRoot(value).setColor(ColorUtils.HIGHLIGHT_TEXT)
                                 .appendRoot(" ")
-                                .appendRoot("[select]").setBold(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
+                                .appendRoot("[select]").setItalic(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
                                 .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to select this value for this attribute").setColor(ColorUtils.REGULAR_TEXT))
                                 .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot edit attribute " + ctx.argAt(2) + " set " + value + (ctx.hasFlag("session") ? " -session" : "")))
                 )
@@ -115,9 +129,8 @@ public class PlotCommands {
                             line.appendRoot("*").setColor(ColorUtils.ERROR_TEXT)
                                     .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("This attribute is required.").setColor(ColorUtils.REGULAR_TEXT));
                         }
-                        line.appendRoot(item.getItemName()).setColor(ColorUtils.REGULAR_TEXT)
-                                .appendRoot(": ").setColor(ColorUtils.REGULAR_TEXT)
-                                .appendRoot(item.getValue());
+                        if (!item.getItemName().isBlank()) line.appendRoot(item.getItemName()).setColor(ColorUtils.REGULAR_TEXT).appendRoot(": ").setColor(ColorUtils.REGULAR_TEXT);
+                        line.appendRoot(item.getValue());
                         return line;
                 })
                 .addComponent(new PageNavigationComponent<>(
@@ -127,10 +140,10 @@ public class PlotCommands {
                         (ctx, res, pg) -> "/plot -session create -page " + ((int) Math.ceil(res.size() / 8.0))
                 ), ComponentPosition.BOTTOM_CENTER)
                 .addComponent(Text.of("Plot Creation Menu").setColor(ColorUtils.HIGHLIGHT_TEXT), ComponentPosition.TOP_CENTER)
-                .addComponent(Text.of("[Finish]").setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setItalic(true)
+                .addComponent(Text.of("[Finish]").setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setBold(true)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to finish the plot creation.").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.SUGGEST_COMMAND, ClickString.of("/plot finish")), ComponentPosition.BOTTOM_LEFT)
-                .addComponent(Text.of("[Cancel]").setColor(ColorUtils.ERROR_TEXT).setUnderlined(true).setItalic(true)
+                .addComponent(Text.of("[Cancel]").setColor(ColorUtils.ERROR_TEXT).setUnderlined(true).setBold(true)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to cancel the plot creation.").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.SUGGEST_COMMAND, ClickString.of("/plot cancel")), ComponentPosition.BOTTOM_RIGHT)
                 .setGrayColor(ColorUtils.REGULAR_TEXT)
@@ -189,7 +202,35 @@ public class PlotCommands {
                     var attr = cacheService.getAttributeCache().get(context.argAt(2));
                     if (attr == null) return;
                     var type = configService.getAttributeType(attr.getType());
-                    if (type == null || type.getValues().isEmpty()) return;
+                    if (type == null) return;
+                    if (type.getValues().isEmpty()) {
+                        if (type.getName().equalsIgnoreCase("integer")) {
+                            if (context.getCurrent() == null || context.getCurrent().isEmpty()) {
+                                context.completion(IntStream.rangeClosed(0, 9).mapToObj(String::valueOf).toArray(String[]::new));
+                                return;
+                            }
+                            try {
+                                int cur = Integer.parseInt(context.getCurrent());
+                                context.completion(IntStream.rangeClosed(cur * 10, (cur * 10) + 10).mapToObj(String::valueOf).toArray(String[]::new));
+                            } catch (NumberFormatException ignored) {
+                            }
+                        } else if (type.getName().equalsIgnoreCase("decimal")) {
+                            var intList = IntStream.rangeClosed(0, 9).mapToObj(String::valueOf).toList();
+                            if (context.getCurrent() == null || context.getCurrent().isEmpty()) {
+                                context.completion(intList.toArray(String[]::new));
+                                return;
+                            }
+                            try {
+                                Double.parseDouble(context.getCurrent());
+                                var suggestions = new ArrayList<>(intList);
+                                if (!context.getCurrent().contains(".")) suggestions.add(".");
+                                context.completion(suggestions.stream().map(s -> context.getCurrent() + s).toArray(String[]::new));
+                            } catch (NumberFormatException ignored) {
+                            }
+                        } else if (type.getName().equalsIgnoreCase("boolean")) {
+                            context.completion("true", "false");
+                        }
+                    }
                     context.completionAt(4, type.getValues().stream().map(String::valueOf).toArray(String[]::new));
                 }
             } else if (context.hasArgAt(1) && context.argAt(1).equalsIgnoreCase("parent")) {
@@ -487,7 +528,12 @@ public class PlotCommands {
                     .appendRoot("Plot id ").setColor(ColorUtils.REGULAR_TEXT)
                     .appendRoot(String.valueOf(plot.getId())).setColor(ColorUtils.HIGHLIGHT_TEXT)
                     .appendRoot(" created.").setColor(ColorUtils.REGULAR_TEXT));
-        } else context.error(res.message());
+        } else {
+            if (cacheService.getPlotBuilderCache().containsKey(context.getUUID()) && context.isPlayer()) {
+                Bukkit.getScheduler().runTask(plugin, () -> context.asPlayer().performCommand("plot create -session"));
+            }
+            context.error(res.message());
+        }
     }
 
     private void cancelPlotCreation(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {

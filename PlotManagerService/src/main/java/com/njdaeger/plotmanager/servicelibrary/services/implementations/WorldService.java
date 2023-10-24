@@ -96,8 +96,12 @@ public class WorldService implements IWorldService {
         }
 
         return transaction.getUnitOfWork().repo(IWorldRepository.class).insertWorld(userId, world.getUID(), world.getName()).thenApply(newWorld -> {
+            if (newWorld == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to create world.");
+            }
             transaction.release();
-            if (newWorld == null) return Result.bad("Failed to create world.");
             var uuid = UUID.fromString(newWorld.getUuid());
             var newWorldModel = new World(newWorld.getId(), uuid, newWorld.getName());
             cacheService.getWorldCache().put(uuid, newWorldModel);
@@ -121,8 +125,12 @@ public class WorldService implements IWorldService {
         }
 
         return transaction.getUnitOfWork().repo(IWorldRepository.class).updateWorld(userId, oldWorld.getId(), oldWorld.getWorldUuid(), newWorldName).thenApply(newWorld -> {
+            if (newWorld == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to update world.");
+            }
             transaction.release();
-            if (newWorld == null) return Result.bad("Failed to update world.");
             var uuid = UUID.fromString(newWorld.getUuid());
             var newWorldModel = new World(newWorld.getId(), uuid, newWorld.getName());
             cacheService.getWorldCache().put(uuid, newWorldModel);
@@ -146,8 +154,12 @@ public class WorldService implements IWorldService {
         }
 
         return transaction.getUnitOfWork().repo(IWorldRepository.class).updateWorld(userId, oldWorld.getId(), newWorldUuid, oldWorld.getWorldName()).thenApply(newWorld -> {
+            if (newWorld == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to update world.");
+            }
             transaction.release();
-            if (newWorld == null) return Result.bad("Failed to update world.");
             var uuid = UUID.fromString(newWorld.getUuid());
             var newWorldModel = new World(newWorld.getId(), uuid, newWorld.getName());
             cacheService.getWorldCache().put(uuid, newWorldModel);
@@ -172,8 +184,12 @@ public class WorldService implements IWorldService {
         }
 
         return transaction.getUnitOfWork().repo(IWorldRepository.class).deleteWorld(userId, oldWorld.getId()).thenApply(deletedWorld -> {
+            if (deletedWorld == -1) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to delete world.");
+            }
             transaction.release();
-            if (deletedWorld == -1) return Result.bad("Failed to delete world.");
             cacheService.getWorldCache().remove(worldUuid);
             return Result.good(oldWorld);
         });

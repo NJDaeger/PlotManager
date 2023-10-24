@@ -62,6 +62,7 @@ public class MySqlTransaction extends AbstractDatabaseTransaction<Connection> {
 
             res.add(obj);
         }
+        statement.close();
         return res;
     }
 

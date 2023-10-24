@@ -92,8 +92,12 @@ public class UserService implements IUserService {
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).insertUser(createdById, newUserUuid, newUserUsername).thenApply(user -> {
+            if (user == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to create user.");
+            }
             transaction.release();
-            if (user == null) return Result.bad("Failed to create user.");
             var newUser = new User(user.getId(), newUserUuid, user.getUsername());
             cacheService.getUserCache().put(newUserUuid, newUser);
             return Result.good(newUser);
@@ -116,8 +120,12 @@ public class UserService implements IUserService {
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).updateUser(updatedById, oldUser.getId(), null, newUsername).thenApply(user -> {
+            if (user == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to update user.");
+            }
             transaction.release();
-            if (user == null) return Result.bad("Failed to update user.");
             var newUser = new User(user.getId(), userId, user.getUsername());
             cacheService.getUserCache().put(userId, newUser);
             return Result.good(newUser);
@@ -140,8 +148,12 @@ public class UserService implements IUserService {
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).updateUser(updatedById, oldUser.getId(), newUserId, null).thenApply(user -> {
+            if (user == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to update user.");
+            }
             transaction.release();
-            if (user == null) return Result.bad("Failed to update user.");
             var newUser = new User(user.getId(), newUserId, user.getUsername());
             cacheService.getUserCache().put(newUserId, newUser);
             return Result.good(newUser);
@@ -164,8 +176,12 @@ public class UserService implements IUserService {
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).deleteUser(deletedById, oldUser.getId()).thenApply(user -> {
+            if (user == -1) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to delete user.");
+            }
             transaction.release();
-            if (user == -1) return Result.bad("Failed to delete user.");
             cacheService.getUserCache().remove(uuidOfUserToDelete);
             return Result.good(oldUser);
         });

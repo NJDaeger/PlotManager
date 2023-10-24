@@ -3,6 +3,7 @@ package com.njdaeger.plotmanager.servicelibrary.services.implementations;
 import com.njdaeger.plotmanager.dataaccess.Util;
 import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
+import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
 import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
 import com.njdaeger.plotmanager.servicelibrary.services.IWorldService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
@@ -35,7 +36,7 @@ public class InitializationService implements Runnable {
             configService.save();
             logger.info("Setup complete!");
         }
-
+        warmup();
         try {
             transaction.close();
         } catch (Exception e) {
@@ -85,6 +86,22 @@ public class InitializationService implements Runnable {
 
         transaction.commit();
         logger.info("Initial attributes inserted!");
+    }
+
+    private void warmup() {
+        logger.info("Warming up...");
+        var userService = transaction.getService(IUserService.class);
+        var worldService = transaction.getService(IWorldService.class);
+        var attributeService = transaction.getService(IAttributeService.class);
+        var plotService = transaction.getService(IPlotService.class);
+
+        awaitAll(
+                userService.getSystemUser(),
+                worldService.getWorlds(),
+                attributeService.getAttributes(),
+                plotService.getPlots()
+        );
+        logger.info("Warmup complete!");
     }
 
 }

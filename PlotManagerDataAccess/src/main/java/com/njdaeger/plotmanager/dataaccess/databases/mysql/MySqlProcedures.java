@@ -316,11 +316,16 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
-    public Pair<String, Map<String, Object>> selectPlotAttributeForPlot(int plotId, int attributeId) {
+    public Pair<String, Map<String, Object>> selectPlotAttributeForPlotByAttributeId(int plotId, int attributeId) {
         return Pair.of("select * from PlotAttribute where plotId = ? and attributeId = ?", Map.of(
                 "1", plotId,
                 "2", attributeId
         ));
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> selectPlotAttributeForPlotById(int plotAttributeId) {
+        return Pair.of("select * from PlotAttribute where id = ?", Map.of("1", plotAttributeId));
     }
 
     @Override

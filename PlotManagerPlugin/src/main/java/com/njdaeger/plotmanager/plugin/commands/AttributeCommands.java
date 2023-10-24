@@ -52,7 +52,7 @@ public class AttributeCommands {
                 Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
                     .appendRoot(attr.getName()).setColor(ColorUtils.HIGHLIGHT_TEXT)
                     .appendRoot(" (").setColor(ColorUtils.REGULAR_TEXT)
-                    .appendRoot(attr.getType()).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                    .appendRoot(attr.getType()).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setItalic(true)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + attr.getType()))
                     .appendRoot(")").setColor(ColorUtils.REGULAR_TEXT))
@@ -71,7 +71,7 @@ public class AttributeCommands {
 
         this.attributeTypeListPaginator = ChatPaginator.<AttributeType, CommandContextWrapper>builder((type, ctx) ->
                 Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
-                    .appendRoot(type.getName()).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                    .appendRoot(type.getName()).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setItalic(true)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + type.getName())))
                 .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
@@ -141,11 +141,11 @@ public class AttributeCommands {
         if (attrib.successful()) {
             context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT)
                     .appendRoot("Attribute ").setColor(ColorUtils.REGULAR_TEXT)
-                    .appendRoot(name).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                    .appendRoot(name).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setItalic(true)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view all attributes").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list attributes"))
                     .appendRoot(" created using type ").setColor(ColorUtils.REGULAR_TEXT)
-                    .appendRoot(type).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true)
+                    .appendRoot(type).setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setItalic(true)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view possible values for this type").setColor(ColorUtils.REGULAR_TEXT))
                         .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/attribute list types " + type))
                     .appendRoot(".").setColor(ColorUtils.REGULAR_TEXT)

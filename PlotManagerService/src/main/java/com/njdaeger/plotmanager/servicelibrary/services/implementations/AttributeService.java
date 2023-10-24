@@ -65,6 +65,28 @@ public class AttributeService implements IAttributeService {
     }
 
     @Override
+    public CompletableFuture<Result<Attribute>> getAttributeById(int id) {
+        transaction.use();
+        if (id < 0) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.bad("Attribute id cannot be less than 0."));
+        }
+
+        var attribute = cacheService.getAttributeCache().values().stream().filter(attr -> attr.getId() == id).findFirst().orElse(null);
+        if (attribute != null) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.good(attribute));
+        }
+
+        return transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributeById(id).thenApply(attr -> {
+            transaction.release();
+            if (attr == null) return Result.bad("Failed to find attribute with id " + id + ".");
+            cacheService.getAttributeCache().put(attr.getName(), new Attribute(attr.getId(), attr.getName(), attr.getType()));
+            return Result.good(cacheService.getAttributeCache().get(attr.getName()));
+        });
+    }
+
+    @Override
     public CompletableFuture<Result<Attribute>> createAttribute(UUID createdBy, String name, String type) {
         transaction.use();
         if (createdBy == null) {
@@ -97,8 +119,12 @@ public class AttributeService implements IAttributeService {
         }
 
         return transaction.getUnitOfWork().repo(IAttributeRepository.class).insertAttribute(userId, name, type).thenApply(success -> {
+            if (success == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to insert attribute.");
+            }
             transaction.release();
-            if (success == null) return Result.bad("Failed to insert attribute.");
             var attribute = new Attribute(success.getId(), name, type);
             cacheService.getAttributeCache().put(name, attribute);
             return Result.good(attribute);
@@ -125,8 +151,12 @@ public class AttributeService implements IAttributeService {
         }
 
         return transaction.getUnitOfWork().repo(IAttributeRepository.class).updateAttribute(userId, oldAttribute.getId(), newName, null).thenApply(success -> {
+            if (success == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to update attribute.");
+            }
             transaction.release();
-            if (success == null) return Result.bad("Failed to update attribute.");
             var attribute = new Attribute(success.getId(), newName, success.getType());
             cacheService.getAttributeCache().remove(oldName);
             cacheService.getAttributeCache().put(newName, attribute);
@@ -154,8 +184,12 @@ public class AttributeService implements IAttributeService {
         }
 
         return transaction.getUnitOfWork().repo(IAttributeRepository.class).updateAttribute(userId, oldAttribute.getId(), null, newType).thenApply(success -> {
+            if (success == null) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to update attribute.");
+            }
             transaction.release();
-            if (success == null) return Result.bad("Failed to update attribute.");
             var attribute = new Attribute(success.getId(), success.getName(), newType);
             cacheService.getAttributeCache().put(name, attribute);
             return Result.good(attribute);
@@ -182,8 +216,12 @@ public class AttributeService implements IAttributeService {
         }
 
         return transaction.getUnitOfWork().repo(IAttributeRepository.class).deleteAttribute(userId, oldAttribute.getId()).thenApply(success -> {
+            if (success == -1) {
+                transaction.release();
+                transaction.abort();
+                return Result.bad("Failed to delete attribute.");
+            }
             transaction.release();
-            if (success == -1) return Result.bad("Failed to delete attribute.");
             cacheService.getAttributeCache().remove(name);
             return Result.good(oldAttribute);
         });

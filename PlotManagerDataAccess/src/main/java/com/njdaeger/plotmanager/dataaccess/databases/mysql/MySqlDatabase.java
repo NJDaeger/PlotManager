@@ -26,7 +26,7 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
 
     @Override
     public Connection createConnection() throws Exception {
-        Connection connection = null;
+        Connection connection;
 
         var host = credentials.getString("host");
         var port = credentials.getInt("port");

@@ -1,12 +1,12 @@
 package com.njdaeger.plotmanager.servicelibrary.services;
 
+import com.njdaeger.plotmanager.servicelibrary.PlotBuilder;
 import com.njdaeger.plotmanager.servicelibrary.Result;
+import com.njdaeger.plotmanager.servicelibrary.models.Plot;
 import com.njdaeger.plotmanager.servicelibrary.models.PlotAttribute;
 import com.njdaeger.plotmanager.servicelibrary.models.PlotGroup;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
 import com.njdaeger.plotmanager.servicelibrary.transactional.ITransactionalService;
-import com.njdaeger.plotmanager.servicelibrary.PlotBuilder;
-import com.njdaeger.plotmanager.servicelibrary.models.Plot;
 import org.bukkit.Location;
 
 import java.util.Comparator;
@@ -59,9 +59,7 @@ public interface IPlotService extends ITransactionalService {
     default CompletableFuture<Result<List<Plot>>> getPlots(Predicate<Plot> predicate) {
         if (predicate == null) return CompletableFuture.completedFuture(Result.bad("Predicate cannot be null."));
         return getPlots().thenApply(result -> {
-            if (result.successful()) {
-                return Result.good(result.getOrThrow().stream().filter(predicate).toList());
-            }
+            if (result.successful()) return Result.good(result.getOrThrow().stream().filter(predicate).toList());
             return result;
         });
     }
@@ -191,15 +189,7 @@ public interface IPlotService extends ITransactionalService {
      * @param plotId The id of the plot
      * @return A result with a list of attributes if successful, or a result with an empty list if the attribute retrieval was unsuccessful.
      */
-    default CompletableFuture<Result<List<PlotAttribute>>> getPlotAttributes(int plotId) {
-        return getPlot(plotId).thenApply(r -> {
-            if (r.successful()) {
-                var plot = r.getOrThrow();
-                return Result.good(plot.getAttributes());
-            }
-            return Result.bad(r.message());
-        });
-    }
+    CompletableFuture<Result<List<PlotAttribute>>> getPlotAttributes(int plotId);
 
     /**
      * Gets an attribute for a plot

@@ -81,7 +81,9 @@ public interface IProcedure {
 
     Pair<String, Map<String, Object>> selectPlotAttributesForPlot(int plotId);
 
-    Pair<String, Map<String, Object>> selectPlotAttributeForPlot(int plotId, int attributeId);
+    Pair<String, Map<String, Object>> selectPlotAttributeForPlotByAttributeId(int plotId, int attributeId);
+
+    Pair<String, Map<String, Object>> selectPlotAttributeForPlotById(int plotAttributeId);
 
     Pair<String, Map<String, Object>> insertPlotAttribute(int createdBy, int plotId, int attributeId, String value);
 

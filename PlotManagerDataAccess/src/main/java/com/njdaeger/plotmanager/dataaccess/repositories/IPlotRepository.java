@@ -3,7 +3,6 @@ package com.njdaeger.plotmanager.dataaccess.repositories;
 import com.njdaeger.plotmanager.dataaccess.IRepository;
 import com.njdaeger.plotmanager.dataaccess.models.PlotAttributeEntity;
 import com.njdaeger.plotmanager.dataaccess.models.PlotEntity;
-import com.njdaeger.plotmanager.dataaccess.models.GroupEntity;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -103,7 +102,14 @@ public interface IPlotRepository extends IRepository {
      * @param attributeId The id of the attribute
      * @return The attribute
      */
-    CompletableFuture<PlotAttributeEntity> getPlotAttributeForPlot(int plotId, int attributeId);
+    CompletableFuture<PlotAttributeEntity> getPlotAttributeForPlotByAttributeId(int plotId, int attributeId);
+
+    /**
+     * Get an attribute for a plot by its id
+     * @param plotAttributeId The id of the plot attribute
+     * @return The attribute
+     */
+    CompletableFuture<PlotAttributeEntity> getPlotAttributeForPlotById(int plotAttributeId);
 
     /**
      * Insert an attribute for a plot

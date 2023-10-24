@@ -164,7 +164,7 @@ public class PlotRepository implements IPlotRepository {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var proc = procedures.selectPlotAttributesForPlot(plotId);
-                return transaction.query(proc.getFirst(), PlotAttributeEntity.class);
+                return transaction.query(proc.getFirst(), proc.getSecond(), PlotAttributeEntity.class);
             } catch (Exception e) {
                 logger.exception(e);
                 return List.of();
@@ -173,10 +173,23 @@ public class PlotRepository implements IPlotRepository {
     }
 
     @Override
-    public CompletableFuture<PlotAttributeEntity> getPlotAttributeForPlot(int plotId, int attributeId) {
+    public CompletableFuture<PlotAttributeEntity> getPlotAttributeForPlotByAttributeId(int plotId, int attributeId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.selectPlotAttributeForPlot(plotId, attributeId);
+                var proc = procedures.selectPlotAttributeForPlotByAttributeId(plotId, attributeId);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotAttributeEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotAttributeEntity> getPlotAttributeForPlotById(int plotAttributeId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlotAttributeForPlotById(plotAttributeId);
                 return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotAttributeEntity.class);
             } catch (Exception e) {
                 logger.exception(e);
@@ -192,7 +205,7 @@ public class PlotRepository implements IPlotRepository {
                 var proc = procedures.insertPlotAttribute(createdBy, plotId, attributeId, value);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
                 if (id == -1) return null;
-                return await(getPlotAttributeForPlot(plotId, id));
+                return await(getPlotAttributeForPlotById(id));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;
@@ -207,7 +220,7 @@ public class PlotRepository implements IPlotRepository {
                 var proc = procedures.updatePlotAttribute(updatedBy, plotId, attributeId, value);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
                 if (id == -1) return null;
-                return await(getPlotAttributeForPlot(plotId, id));
+                return await(getPlotAttributeForPlotById(id));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;

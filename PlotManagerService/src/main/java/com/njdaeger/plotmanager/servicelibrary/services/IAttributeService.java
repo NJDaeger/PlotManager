@@ -24,6 +24,13 @@ public interface IAttributeService extends ITransactionalService {
     CompletableFuture<Result<Attribute>> getAttribute(String name);
 
     /**
+     * Get an attribute by id
+     * @param id The id of the attribute
+     * @return A result with the attribute if successful, or a result with null if the attribute retrieval was unsuccessful.
+     */
+    CompletableFuture<Result<Attribute>> getAttributeById(int id);
+
+    /**
      * Create an attribute
      * @param createdBy The creator of the attribute
      * @param name The name of the attribute
