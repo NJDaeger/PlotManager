@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public interface IAttributeService extends ITransactionalService {
+public interface IAttributeService extends ITransactionalService, ICached {
 
     /**
      * Get all attributes

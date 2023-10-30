@@ -194,4 +194,23 @@ public class WorldService implements IWorldService {
             return Result.good(oldWorld);
         });
     }
+
+    @Override
+    public void clearCache() {
+        cacheService.getWorldCache().clear();
+    }
+
+    @Override
+    public CompletableFuture<Void> initializeCache() {
+        transaction.use();
+
+        return transaction.getUnitOfWork().repo(IWorldRepository.class).getWorlds().thenApply(worlds -> {
+            transaction.release();
+            worlds.forEach(world -> {
+                var uuid = UUID.fromString(world.getUuid());
+                cacheService.getWorldCache().put(uuid, new World(world.getId(), uuid, world.getName()));
+            });
+            return null;
+        });
+    }
 }

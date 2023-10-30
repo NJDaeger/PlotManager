@@ -2,6 +2,7 @@ package com.njdaeger.plotmanager.plugin.commands;
 
 import com.njdaeger.pdk.command.TabContext;
 import com.njdaeger.pdk.command.exception.PDKCommandException;
+import com.njdaeger.pdk.utils.Pair;
 import com.njdaeger.pdk.utils.text.Text;
 import com.njdaeger.pdk.utils.text.click.ClickAction;
 import com.njdaeger.pdk.utils.text.click.ClickString;
@@ -10,18 +11,24 @@ import com.njdaeger.pdk.utils.text.pager.ChatPaginator;
 import com.njdaeger.pdk.utils.text.pager.ComponentPosition;
 import com.njdaeger.pdk.utils.text.pager.components.PageNavigationComponent;
 import com.njdaeger.pdk.utils.text.pager.components.ResultCountComponent;
-import com.njdaeger.plotmanager.servicelibrary.ColorUtils;
 import com.njdaeger.plotmanager.plugin.IPlotManagerPlugin;
 import com.njdaeger.plotmanager.plugin.commands.flags.PageFlag;
 import com.njdaeger.plotmanager.plugin.commands.flags.ParentFlag;
 import com.njdaeger.plotmanager.plugin.commands.flags.PlotFlag;
 import com.njdaeger.plotmanager.plugin.commands.flags.PlotGroupFlag;
+import com.njdaeger.plotmanager.plugin.commands.flags.RadiusFlag;
 import com.njdaeger.plotmanager.plugin.commands.flags.ReferenceFlag;
 import com.njdaeger.plotmanager.plugin.commands.flags.SessionFlag;
+import com.njdaeger.plotmanager.plugin.commands.flags.UsersFlag;
+import com.njdaeger.plotmanager.plugin.commands.flags.WorldFlag;
 import com.njdaeger.plotmanager.plugin.commands.wrappers.CommandBuilderWrapper;
 import com.njdaeger.plotmanager.plugin.commands.wrappers.CommandContextWrapper;
-import com.njdaeger.plotmanager.servicelibrary.PlotBuilder;
+import com.njdaeger.plotmanager.servicelibrary.ColorUtils;
+import com.njdaeger.plotmanager.servicelibrary.PlotChatListItems;
 import com.njdaeger.plotmanager.servicelibrary.models.Plot;
+import com.njdaeger.plotmanager.servicelibrary.models.PlotGroup;
+import com.njdaeger.plotmanager.servicelibrary.models.User;
+import com.njdaeger.plotmanager.servicelibrary.models.World;
 import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
 import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
@@ -29,10 +36,15 @@ import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
 import com.njdaeger.serviceprovider.IServiceProvider;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.map.MinecraftFont;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
-import java.util.stream.DoubleStream;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.njdaeger.plotmanager.dataaccess.Util.await;
@@ -45,13 +57,17 @@ public class PlotCommands {
     private final ICacheService cacheService;
     private final ChatPaginator<Plot, CommandContextWrapper> parentSelectorPaginator;
     private final ChatPaginator<String, CommandContextWrapper> attributeValueSelectListPaginator;
-    private final ChatPaginator<PlotBuilder.PlotBuilderListItem, CommandContextWrapper> plotCreationMenuPaginator;
+    private final ChatPaginator<PlotChatListItems.PlotChatListItem, CommandContextWrapper> plotCreationMenuPaginator;
+    private final ChatPaginator<PlotChatListItems.PlotChatListItem, CommandContextWrapper> plotInfoMenuPaginator;
+    private final ChatPaginator<Plot, CommandContextWrapper> plotListPaginator;
 
     public PlotCommands(IPlotManagerPlugin plugin, IServiceProvider provider, IConfigService configService, ICacheService cacheService) {
         this.provider = provider;
         this.plugin = plugin;
         this.cacheService = cacheService;
         this.configService = configService;
+
+        var df = new DecimalFormat("#.##");
 
         CommandBuilderWrapper.of("plot")
                 .executor(this::plotCommand)
@@ -61,16 +77,32 @@ public class PlotCommands {
                 .flag(new ReferenceFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("create")))
                 .flag(new PlotGroupFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("create")))
                 .flag(new SessionFlag(ctx -> ctx.argAt(0).equalsIgnoreCase("edit") || ctx.argAt(0).equalsIgnoreCase("create")))
-                .flag(new PlotFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("edit") && !ctx.hasFlag("session")))
-                .flag(new PageFlag(ctx -> ctx.argAt(0).equalsIgnoreCase("create") || ctx.argAt(0).equalsIgnoreCase("edit") &&
-                        ((ctx.hasArgAt(1) && ctx.argAt(1).equalsIgnoreCase("attribute") && ctx.hasArgAt(3) && ctx.argAt(3).equalsIgnoreCase("select")) ||
-                        (ctx.hasArgAt(1) && ctx.argAt(1).equalsIgnoreCase("parent") && ctx.hasArgAt(2) && ctx.argAt(2).equalsIgnoreCase("select")))))
+                .flag(new PlotFlag(cacheService, ctx ->
+                        ctx.argAt(0).equalsIgnoreCase("info") ||
+                        ctx.argAt(0).equalsIgnoreCase("claim") ||
+                        ctx.argAt(0).equalsIgnoreCase("add") ||
+                        ctx.argAt(0).equalsIgnoreCase("remove") ||
+                        ctx.argAt(0).equalsIgnoreCase("leave") ||
+                        ctx.argAt(0).equalsIgnoreCase("delete") ||
+                        ctx.argAt(0).equalsIgnoreCase("edit") && !ctx.hasFlag("session")))
+                .flag(new RadiusFlag(ctx -> ctx.argAt(0).equalsIgnoreCase("list")))
+                .flag(new UsersFlag(ctx -> ctx.argAt(0).equalsIgnoreCase("info")))
+                .flag(new WorldFlag(cacheService, ctx -> ctx.argAt(0).equalsIgnoreCase("list")))
+                .flag(new PageFlag(ctx ->
+                        ctx.argAt(0).equalsIgnoreCase("info") ||
+                        ctx.argAt(0).equalsIgnoreCase("list") ||
+                        ctx.argAt(0).equalsIgnoreCase("create") ||
+                        ctx.argAt(0).equalsIgnoreCase("edit") &&
+                            ((ctx.hasArgAt(1) && ctx.argAt(1).equalsIgnoreCase("attribute") && ctx.hasArgAt(3) && ctx.argAt(3).equalsIgnoreCase("select")) ||
+                            (ctx.hasArgAt(1) && ctx.argAt(1).equalsIgnoreCase("parent") && ctx.hasArgAt(2) && ctx.argAt(2).equalsIgnoreCase("select")))))
                 .permissions("plotmanager.plot.create", "plotmanager.plot.edit", "plotmanager.plot.cancel", "plotmanager.plot.finish")
                 .build()
                 .register(plugin);
 
         this.parentSelectorPaginator = ChatPaginator.<Plot, CommandContextWrapper>builder((plt, ctx) -> {
                 var editSession = ctx.hasFlag("session");
+                var plot = ctx.resolvePlotUnchecked();
+                if (plot == null && !editSession) return Text.of("No plot found.").setColor(ColorUtils.ERROR_TEXT);
                 return Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
                         .appendRoot(String.valueOf(plt.getId())).setColor(ColorUtils.HIGHLIGHT_TEXT)
                         .setHoverEvent(HoverAction.SHOW_TEXT,
@@ -87,7 +119,7 @@ public class PlotCommands {
                         .appendRoot(" ")
                         .appendRoot("[select]").setItalic(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
                         .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to select this plot to be the parent.").setColor(ColorUtils.REGULAR_TEXT))
-                        .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot edit parent set " + plt.getId() + (editSession ? " -session" : "")));
+                        .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot edit parent set " + plt.getId() + (editSession ? " -session" : "-plot " + plot.getId())));
                 })
                 .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
@@ -102,14 +134,17 @@ public class PlotCommands {
                 .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
                 .build();
 
-        this.attributeValueSelectListPaginator = ChatPaginator.<String, CommandContextWrapper>builder((value, ctx) ->
-                        Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
-                                .appendRoot(value).setColor(ColorUtils.HIGHLIGHT_TEXT)
-                                .appendRoot(" ")
-                                .appendRoot("[select]").setItalic(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
-                                .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to select this value for this attribute").setColor(ColorUtils.REGULAR_TEXT))
-                                .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot edit attribute " + ctx.argAt(2) + " set " + value + (ctx.hasFlag("session") ? " -session" : "")))
-                )
+        this.attributeValueSelectListPaginator = ChatPaginator.<String, CommandContextWrapper>builder((value, ctx) -> {
+                    var editSession = ctx.hasFlag("session");
+                    var plot = ctx.resolvePlotUnchecked();
+                    if (plot == null && !editSession) return Text.of("No plot found.").setColor(ColorUtils.ERROR_TEXT);
+                    return Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true)
+                            .appendRoot(value).setColor(ColorUtils.HIGHLIGHT_TEXT)
+                            .appendRoot(" ")
+                            .appendRoot("[select]").setItalic(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
+                            .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to select this value for this attribute").setColor(ColorUtils.REGULAR_TEXT))
+                            .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot edit attribute " + ctx.argAt(2) + " set " + value + (editSession ? " -session" : "-plot " + plot.getId())));
+                })
                 .addComponent(new ResultCountComponent<>(true), ComponentPosition.TOP_LEFT)
                 .addComponent(new PageNavigationComponent<>(
                         (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
@@ -123,13 +158,13 @@ public class PlotCommands {
                 .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
                 .build();
 
-        this.plotCreationMenuPaginator = ChatPaginator.<PlotBuilder.PlotBuilderListItem, CommandContextWrapper>builder((item, ctx) -> {
+        this.plotCreationMenuPaginator = ChatPaginator.<PlotChatListItems.PlotChatListItem, CommandContextWrapper>builder((item, ctx) -> {
                         var line = Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true);
                         if (item.isRequired()) {
                             line.appendRoot("*").setColor(ColorUtils.ERROR_TEXT)
                                     .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("This attribute is required.").setColor(ColorUtils.REGULAR_TEXT));
                         }
-                        if (!item.getItemName().isBlank()) line.appendRoot(item.getItemName()).setColor(ColorUtils.REGULAR_TEXT).appendRoot(": ").setColor(ColorUtils.REGULAR_TEXT);
+                        if (!item.getName().isBlank()) line.appendRoot(item.getName()).setColor(ColorUtils.REGULAR_TEXT).appendRoot(": ").setColor(ColorUtils.REGULAR_TEXT);
                         line.appendRoot(item.getValue());
                         return line;
                 })
@@ -150,6 +185,88 @@ public class PlotCommands {
                 .setHighlightColor(ColorUtils.HIGHLIGHT_TEXT)
                 .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
                 .build();
+
+        this.plotInfoMenuPaginator = ChatPaginator.<PlotChatListItems.PlotChatListItem, CommandContextWrapper>builder((item, ctx) -> {
+                    var line = Text.of("| ").setColor(ColorUtils.REGULAR_TEXT).setBold(true);
+                    if (item.isRequired()) {
+                        line.appendRoot("*").setColor(ColorUtils.ERROR_TEXT)
+                                .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("This attribute is required.").setColor(ColorUtils.REGULAR_TEXT));
+                    }
+                    if (!item.getName().isBlank()) line.appendRoot(item.getName()).setColor(ColorUtils.REGULAR_TEXT).appendRoot(": ").setColor(ColorUtils.REGULAR_TEXT);
+                    line.appendRoot(item.getValue());
+                    return line;
+                })
+                .addComponent(new PageNavigationComponent<>(
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg - 1),
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg + 1),
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + ((int) Math.ceil(res.size() / 8.0))
+                ), ComponentPosition.BOTTOM_CENTER)
+                .addComponent(Text.of("Plot Info Menu").setColor(ColorUtils.HIGHLIGHT_TEXT), ComponentPosition.TOP_CENTER)
+                .addComponent((ctx, p, r, c) -> {
+                    var userList = ctx.hasFlag("users");
+                    if (!userList) {
+                        return Text.of("[Users]").setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setItalic(true)
+                                .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view the users of this plot.").setColor(ColorUtils.REGULAR_TEXT))
+                                .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot info -users -plot " + ctx.resolvePlotUnchecked().getId() + " -page 1"));
+                    }
+                    return Text.of("[Attributes]").setColor(ColorUtils.ACTION_TEXT).setUnderlined(true).setItalic(true)
+                            .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view the attributes of this plot.").setColor(ColorUtils.REGULAR_TEXT))
+                            .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot info -plot " + ctx.resolvePlotUnchecked().getId() + " -page 1"));
+                }, ComponentPosition.BOTTOM_RIGHT)
+                .addComponent((ctx, p, r, c) -> Text.of(ctx.resolvePlotUnchecked() == null ? "Unknown Plot" : "Plot ID #" + ctx.resolvePlotUnchecked().getId()).setColor(ctx.resolvePlotUnchecked() == null ? ColorUtils.ERROR_TEXT : ColorUtils.HIGHLIGHT_TEXT), ComponentPosition.TOP_RIGHT)
+                .setGrayColor(ColorUtils.REGULAR_TEXT)
+                .setHighlightColor(ColorUtils.HIGHLIGHT_TEXT)
+                .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
+                .build();
+
+        this.plotListPaginator = ChatPaginator.<Plot, CommandContextWrapper>builder((plot, ctx) -> {
+                    var statusAttr = plot.getAttribute("status");
+                    var statusString = statusAttr == null ? "Unknown" : statusAttr.getValue();
+                    if (plot.isDeleted()) statusString = "Deleted";
+                    var statusColor = switch (statusString.toLowerCase()) {
+                        case "hold" -> Color.fromRGB(0x6b6b6b);
+                        case "draft" -> Color.fromRGB(0xc49c45);
+                        case "plotted" -> Color.fromRGB(0x00d9ff);
+                        case "review" -> Color.fromRGB(0x1eb076);
+                        case "complete" -> Color.fromRGB(0x0fb800);
+                        default -> ColorUtils.ERROR_TEXT;
+                    };
+                    var descriptionAttr = plot.getAttribute("description");
+                    var descriptionString = descriptionAttr == null ? "No description provided." : descriptionAttr.getValue();
+                    var trimmed = trimToLength(descriptionString, 190);
+                    var text = Text.of("| ").setColor(statusColor).setBold(true)
+                            .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Status: ").setColor(ColorUtils.REGULAR_TEXT).appendRoot(statusString).setColor(statusColor))
+                            .appendRoot("[T]").setColor(ColorUtils.ACTION_TEXT).setItalic(true).setUnderlined(true)
+                            .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Distance: ").setColor(ColorUtils.REGULAR_TEXT)
+                                    .appendRoot(df.format(plot.getLocation().distance(ctx.asPlayer().getLocation())) + "m").setColor(ColorUtils.HIGHLIGHT_TEXT)
+                                    .appendRoot("\nClick to teleport to this plot.").setColor(ColorUtils.REGULAR_TEXT))
+                            .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot goto " + plot.getId()))
+                            .appendRoot(" ")
+                            .appendRoot(String.format("#%5s", plot.getId())).setItalic(true).setUnderlined(true).setColor(ColorUtils.ACTION_TEXT)
+                            .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to view additional plot information.").setColor(ColorUtils.REGULAR_TEXT))
+                            .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot info -plot " + plot.getId()))
+                            .appendRoot(" ")
+                            .appendRoot(trimToLength(trimmed, 190).trim()).setColor(ColorUtils.REGULAR_TEXT);
+
+                    if (!trimmed.equalsIgnoreCase(descriptionString)) {
+                        text.appendRoot("...").setColor(ColorUtils.ACTION_TEXT).setItalic(true)
+                                .setHoverEvent(HoverAction.SHOW_TEXT, Text.of(descriptionString).setColor(ColorUtils.REGULAR_TEXT));
+                    }
+                    return text;
+                })
+                .addComponent(Text.of("Plot List").setColor(ColorUtils.HIGHLIGHT_TEXT), ComponentPosition.TOP_CENTER)
+                .addComponent(new PageNavigationComponent<>(
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + 1,
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg - 1),
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + (pg + 1),
+                        (ctx, res, pg) -> "/plot " + ctx.getRawCommandString().replace("-page " + pg, "") + " -page " + ((int) Math.ceil(res.size() / 8.0))
+                ), ComponentPosition.BOTTOM_CENTER)
+                .setGrayColor(ColorUtils.REGULAR_TEXT)
+                .setHighlightColor(ColorUtils.HIGHLIGHT_TEXT)
+                .setGrayedOutColor(ColorUtils.GRAYED_TEXT)
+                .build();
+
 
     }
 
@@ -175,6 +292,31 @@ public class PlotCommands {
     /plot cancel
     /plot finish
 
+
+    /plot list [<attr>=<value> ...]
+        -page <page>        the page to view
+        -group <group>      list plots in a group
+        -user <user>        list plots that a user is a part of
+        -world <world>      list plots in a world
+        -parent <plotId>    list plots that are children of a plot
+        -radius <radius>    list plots within a radius of the current location
+
+    | [T] #12345 Description
+    click on T to teleport to the plot
+    click on the plot Id to view the plot info
+
+    ? [T] | Description
+    color of the ? is based on the status of the plot
+
+    /plot info -plot <plotId> -users
+
+    /plot claim -plot <plotId>          adds the current user to the plot (if the plot has no claimer)
+    /plot add <user> -plot <plotId>     adds a user to the plot (only if the executor is a user on the plot)
+    /plot remove <user> -plot <plotId>  removes a user from the plot (only if the executor is a user on the plot)
+    /plot leave -plot <plotId>          removes the current user from the plot (only if the executor is a user on the plot)
+
+    /plot delete -plot <plotId>
+
      */
 
     private void plotCommand(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
@@ -186,13 +328,29 @@ public class PlotCommands {
             cancelPlotCreation(transaction, context);
         } else if (context.argAt(0).equalsIgnoreCase("finish")) {
             finishPlotCreation(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("delete")) {
+            deletePlot(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("list")) {
+            listPlots(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("info")) {
+            plotInfo(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("claim")) {
+            claimPlot(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("add")) {
+            addPlotMember(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("remove")) {
+            removePlotMember(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("leave")) {
+            leavePlot(transaction, context);
+        } else if (context.argAt(0).equalsIgnoreCase("goto")) {
+            gotoPlot(transaction, context);
         } else {
-            context.error("Invalid argument " + context.argAt(0) + ". Expected 'create', 'edit', 'cancel', or 'finish'.");
+            context.error("Invalid argument " + context.argAt(0) + ".");
         }
     }
 
     private void plotTabCompletion(TabContext context) {
-        context.completionAt(0, "create", "edit", "cancel", "finish");
+        context.completionAt(0, "create", "edit", "cancel", "finish", "delete", "list", "info", "claim", "add", "remove", "leave", "goto");
         if (context.hasArgAt(0) && context.argAt(0).equalsIgnoreCase("edit")) {
             context.completionAt(1, "attribute", "parent");
             if (context.hasArgAt(1) && context.argAt(1).equalsIgnoreCase("attribute")) {
@@ -225,10 +383,12 @@ public class PlotCommands {
                                 var suggestions = new ArrayList<>(intList);
                                 if (!context.getCurrent().contains(".")) suggestions.add(".");
                                 context.completion(suggestions.stream().map(s -> context.getCurrent() + s).toArray(String[]::new));
+                                return;
                             } catch (NumberFormatException ignored) {
                             }
                         } else if (type.getName().equalsIgnoreCase("boolean")) {
                             context.completion("true", "false");
+                            return;
                         }
                     }
                     context.completionAt(4, type.getValues().stream().map(String::valueOf).toArray(String[]::new));
@@ -237,6 +397,56 @@ public class PlotCommands {
                 context.completionAt(2, "remove", "select", "set");
                 if (context.hasArgAt(2) && context.argAt(2).equalsIgnoreCase("set")) {
                     context.completionAt(3, cacheService.getPlotCache().keySet().stream().map(String::valueOf).toArray(String[]::new));
+                }
+            }
+        }
+        if (context.hasArgAt(0) && context.argAt(0).equalsIgnoreCase("goto")) {
+            context.completionAt(1, cacheService.getPlotCache().keySet().stream().map(String::valueOf).toArray(String[]::new));
+        }
+        if (context.hasArgAt(0) && (context.argAt(0).equalsIgnoreCase("add"))) {
+            context.completionAt(1, cacheService.getUserCache().values().stream().map(User::getLastKnownName).toArray(String[]::new));
+        }
+        if (context.hasArgAt(0) && context.argAt(0).equalsIgnoreCase("remove")) {
+            context.completionAt(1, cacheService.getUserCache().values().stream().map(User::getLastKnownName).toArray(String[]::new));
+        }
+        if (context.hasArgAt(0) && context.argAt(0).equalsIgnoreCase("list")) {
+            context.completion(cacheService.getAttributeCache().keySet().stream().map(s -> s.concat("=")).toArray(String[]::new));
+            if (context.getCurrent() != null && context.getCurrent().contains("=")) {
+                var attribute = context.getCurrent().substring(0, context.getCurrent().indexOf("="));
+                var split = context.getCurrent().split("=");
+                var curVal = split.length == 2 ? split[1] : "";
+                var attr = cacheService.getAttributeCache().get(attribute);
+                if (attr == null) return;
+                var type = configService.getAttributeType(attr.getType());
+                if (type == null) return;
+                if (type.getName().equalsIgnoreCase("string")) {
+                    context.completion(context.getCurrent() + "\"text here\"");
+                } else if (type.getName().equalsIgnoreCase("boolean")) {
+                    context.completion(context.getCurrent() + "true", context.getCurrent() + "false");
+                } else if (type.getName().equalsIgnoreCase("integer")) {
+                    if (curVal == null || curVal.isEmpty()) {
+                        context.completion(IntStream.rangeClosed(0, 9).mapToObj(String::valueOf).map(s -> context.getCurrent() + s).toArray(String[]::new));
+                        return;
+                    }
+                    try {
+                        Integer.parseInt(curVal);
+                        context.completion(IntStream.rangeClosed(0, 9).mapToObj(String::valueOf).map(s -> context.getCurrent() + s).toArray(String[]::new));
+                    } catch (NumberFormatException ignored) {
+                    }
+                } else if (type.getName().equalsIgnoreCase("decimal")) {
+                    if (curVal == null || curVal.isEmpty()) {
+                        context.completion(IntStream.rangeClosed(0, 9).mapToObj(String::valueOf).map(s -> context.getCurrent() + s).toArray(String[]::new));
+                        return;
+                    }
+                    try {
+                        Double.parseDouble(curVal);
+                        var suggestions = new ArrayList<>(IntStream.rangeClosed(0, 9).mapToObj(String::valueOf).toList());
+                        if (!curVal.contains(".")) suggestions.add(".");
+                        context.completion(suggestions.stream().map(s -> context.getCurrent() + s).toArray(String[]::new));
+                    } catch (NumberFormatException ignored) {
+                    }
+                } else if (!type.getValues().isEmpty()) {
+                    context.completion(type.getValues().stream().map(s -> context.getCurrent() + s).toArray(String[]::new));
                 }
             }
         }
@@ -299,7 +509,7 @@ public class PlotCommands {
         if (useSession) {
             var builder = await(plotService.getPlotBuilder(context.getUUID())).getOrThrow(new PDKCommandException("You do not have a plot creation session open."));
             var requiredAttributes = configService.getRequiredPlotAttributes();
-            var menu = plotCreationMenuPaginator.generatePage(context, builder.getBuilderListItems(requiredAttributes, attributeService, configService), page);
+            var menu = plotCreationMenuPaginator.generatePage(context, PlotChatListItems.getListItemsForBuilder(requiredAttributes, attributeService, configService, builder), page);
             if (menu == null) context.error("Invalid page number.");
             else menu.sendTo(context.getSender());
             return;
@@ -322,8 +532,8 @@ public class PlotCommands {
                 builder.addAttribute(attr, def);
             });
 
-            var menu = plotCreationMenuPaginator.generatePage(context, builder.getBuilderListItems(requiredAttributes, attributeService, configService), page);
-            if (menu == null) context.error("Invalid page number.");
+            var menu = plotCreationMenuPaginator.generatePage(context, PlotChatListItems.getListItemsForBuilder(requiredAttributes, attributeService, configService, builder), page);
+            if (menu == null) context.error("No data to show.");
             else menu.sendTo(context.getSender());
         } else context.error(res.message());
     }
@@ -353,7 +563,8 @@ public class PlotCommands {
         var editPlot = context.<Plot>getFlag("plot");
 
         if (editSession && editPlot != null) context.error("Flags -session and -plot are mutually exclusive. Please only use one of them.");
-        else if (!editSession && editPlot == null) context.error("No plot to edit. Please use the -plot flag to specify a plot to edit, or use the -session flag to edit the plot builder.");
+        else if (!editSession && editPlot == null) editPlot = context.resolvePlot();
+        if (!editSession && editPlot == null) context.error("No plot to edit. Please use the -plot flag to specify a plot to edit, or use the -session flag to edit the plot builder.");
 
         var editing = context.argAt(1);
         if (editing.equalsIgnoreCase("attribute")) {
@@ -389,8 +600,8 @@ public class PlotCommands {
             if (builderRes.successful()) {
                 var builder = builderRes.getOrThrow();
                 builder.addAttribute(attribute, null);
-                var menu = plotCreationMenuPaginator.generatePage(context, builder.getBuilderListItems(configService.getRequiredPlotAttributes(), transaction.getService(IAttributeService.class), configService), 1);
-                if (menu == null) context.error("Invalid page number.");
+                var menu = plotCreationMenuPaginator.generatePage(context, PlotChatListItems.getListItemsForBuilder(configService.getRequiredPlotAttributes(), transaction.getService(IAttributeService.class), configService, builder), 1);
+                if (menu == null) context.error("No data to show.");
                 else menu.sendTo(context.getSender());
             }
             else context.error(builderRes.message());
@@ -418,7 +629,7 @@ public class PlotCommands {
         if (type.getValues().isEmpty()) context.error("Attribute " + attribute + " does not have a defined list of values. It is of type " + attr.getType() + ".");
         var res = attributeValueSelectListPaginator.generatePage(context, type.getValues(), page);
 
-        if (res == null) context.error("Invalid page " + page + ".");
+        if (res == null) context.error("No pages to display.");
         context.send(res.getMessage());
     }
 
@@ -436,8 +647,8 @@ public class PlotCommands {
             if (!builderRes.successful()) context.error(builderRes.message());
             var builder = builderRes.getOrThrow();
             builder.addAttribute(attribute, value);
-            var menu = plotCreationMenuPaginator.generatePage(context, builder.getBuilderListItems(configService.getRequiredPlotAttributes(), attributeService, configService), 1);
-            if (menu == null) context.error("Invalid page number.");
+            var menu = plotCreationMenuPaginator.generatePage(context, PlotChatListItems.getListItemsForBuilder(configService.getRequiredPlotAttributes(), attributeService, configService, builder), 1);
+            if (menu == null) context.error("No data to show.");
             else menu.sendTo(context.getSender());
         } else {
             var res = await(transaction.getService(IPlotService.class).setPlotAttribute(context.getUUID(), plotToEdit.getId(), attribute, value));
@@ -470,8 +681,8 @@ public class PlotCommands {
             if (!builderRes.successful()) context.error(builderRes.message());
             var builder = builderRes.getOrThrow();
             builder.setParent(null);
-            var menu = plotCreationMenuPaginator.generatePage(context, builder.getBuilderListItems(configService.getRequiredPlotAttributes(), transaction.getService(IAttributeService.class), configService), 1);
-            if (menu == null) context.error("Invalid page number.");
+            var menu = plotCreationMenuPaginator.generatePage(context, PlotChatListItems.getListItemsForBuilder(configService.getRequiredPlotAttributes(), transaction.getService(IAttributeService.class), configService, builder), 1);
+            if (menu == null) context.error("No data to show.");
             else menu.sendTo(context.getSender());
         } else {
             var res = await(plotService.removePlotParent(context.getUUID(), plotToEdit.getId()));
@@ -491,7 +702,7 @@ public class PlotCommands {
 
         var res = parentSelectorPaginator.generatePage(context, new ArrayList<>(cacheService.getPlotCache().values()), page);
 
-        if (res == null) context.error("Invalid page " + page + ".");
+        if (res == null) context.error("Invalid page number.");
         context.send(res.getMessage());
     }
 
@@ -507,13 +718,13 @@ public class PlotCommands {
             if (!builderRes.successful()) context.error(builderRes.message());
             var builder = builderRes.getOrThrow();
             builder.setParent(parent);
-            var menu = plotCreationMenuPaginator.generatePage(context, builder.getBuilderListItems(configService.getRequiredPlotAttributes(), transaction.getService(IAttributeService.class), configService), 1);
-            if (menu == null) context.error("Invalid page number.");
+            var menu = plotCreationMenuPaginator.generatePage(context, PlotChatListItems.getListItemsForBuilder(configService.getRequiredPlotAttributes(), transaction.getService(IAttributeService.class), configService, builder), 1);
+            if (menu == null) context.error("No data to show.");
             else menu.sendTo(context.getSender());
         } else {
             var res = await(plotService.setPlotParent(context.getUUID(), plotToEdit.getId(), parentId));
             if (!res.successful()) context.error(res.message());
-            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("Parent set to ").setColor(ColorUtils.REGULAR_TEXT).appendRoot(String.valueOf(parent.getId())).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(".").setColor(ColorUtils.REGULAR_TEXT));
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("Parent set to ").setColor(ColorUtils.REGULAR_TEXT).appendRoot("#" + parent.getId()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(".").setColor(ColorUtils.REGULAR_TEXT));
         }
     }
 
@@ -530,7 +741,9 @@ public class PlotCommands {
                     .appendRoot(" created.").setColor(ColorUtils.REGULAR_TEXT));
         } else {
             if (cacheService.getPlotBuilderCache().containsKey(context.getUUID()) && context.isPlayer()) {
-                Bukkit.getScheduler().runTask(plugin, () -> context.asPlayer().performCommand("plot create -session"));
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    context.asPlayer().performCommand("plot create -session");
+                });
             }
             context.error(res.message());
         }
@@ -543,5 +756,190 @@ public class PlotCommands {
         if (res.successful()) {
             context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("Plot creation cancelled.").setColor(ColorUtils.REGULAR_TEXT));
         } else context.error(res.message());
+    }
+
+    private void deletePlot(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var plotService = transaction.getService(IPlotService.class);
+        var plot = context.resolvePlot();
+
+        var res = await(plotService.deletePlot(context.getUUID(), plot.getId()));
+        if (res.successful()) {
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("Plot ").setColor(ColorUtils.REGULAR_TEXT).appendRoot("#" + plot.getId()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(" deleted.").setColor(ColorUtils.REGULAR_TEXT));
+        } else context.error(res.message());
+    }
+
+    private void claimPlot(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var plotService = transaction.getService(IPlotService.class);
+        var plot = context.resolvePlot();
+
+        if (plot.hasAnyActiveUsers()) context.error("This plot is already claimed. Ask to be added by a member.");
+        var res = await(plotService.addPlotUser(context.getUUID(), plot.getId(), context.getUUID()));
+
+        if (res.successful()) {
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("You have claimed plot ").setColor(ColorUtils.REGULAR_TEXT).appendRoot("#" + plot.getId()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(".").setColor(ColorUtils.REGULAR_TEXT));
+        } else context.error(res.message());
+    }
+
+    private void addPlotMember(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var plotService = transaction.getService(IPlotService.class);
+        var plot = context.resolvePlot();
+
+        if (plot.getUser(context.getUUID()) == null) context.error("You cannot add people to this plot. You are not a member of plot #" + plot.getId() + ".");
+
+        var username = context.argAt(1);
+        var user = context.resolveUser(username);
+
+        var res = await(plotService.addPlotUser(context.getUUID(), plot.getId(), user.getUserId()));
+        if (res.successful()) {
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("User ").setColor(ColorUtils.REGULAR_TEXT).appendRoot(user.getLastKnownName()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(" added to plot ").setColor(ColorUtils.REGULAR_TEXT).appendRoot("#" + plot.getId()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(".").setColor(ColorUtils.REGULAR_TEXT));
+        } else context.error(res.message());
+
+    }
+
+    private void removePlotMember(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var plotService = transaction.getService(IPlotService.class);
+        var plot = context.resolvePlot();
+
+        if (plot.getUser(context.getUUID()) == null) context.error("You cannot remove people from this plot. You are not a member of plot #" + plot.getId() + ".");
+
+        var username = context.argAt(1);
+        var user = context.resolveUser(username);
+
+        var res = await(plotService.removePlotUser(context.getUUID(), plot.getId(), user.getUserId()));
+        if (res.successful()) {
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("User ").setColor(ColorUtils.REGULAR_TEXT).appendRoot(user.getLastKnownName()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(" removed from plot ").setColor(ColorUtils.REGULAR_TEXT).appendRoot("#" + plot.getId()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(".").setColor(ColorUtils.REGULAR_TEXT));
+        } else context.error(res.message());
+    }
+
+    private void leavePlot(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var plotService = transaction.getService(IPlotService.class);
+        var plot = context.resolvePlot();
+
+        if (plot.getUser(context.getUUID()) == null) context.error("You cannot leave this plot. You are not a member of plot #" + plot.getId() + ".");
+
+        var res = await(plotService.removePlotUser(context.getUUID(), plot.getId(), context.getUUID()));
+        if (res.successful()) {
+            context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("You have left plot ").setColor(ColorUtils.REGULAR_TEXT).appendRoot("#" + plot.getId()).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(".").setColor(ColorUtils.REGULAR_TEXT));
+        } else context.error(res.message());
+    }
+
+    /*
+
+        /plot list [<attr>=<value> ...]
+        -page <page>        the page to view
+        -group <group>      list plots in a group
+        -user <user>        list plots that a user is a part of
+        -world <world>      list plots in a world
+        -parent <plotId>    list plots that are children of a plot
+        -radius <radius>    list plots within a radius of the current location
+
+     */
+    private void listPlots(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var page = context.getFlag("page", 1);
+        var group = context.<PlotGroup>getFlag("group");
+        var user = context.<User>getFlag("user");
+        var world = context.<World>getFlag("world");
+        var parent = context.<Plot>getFlag("parent");
+        var radius = context.getFlag("radius", -1);
+
+        //attributes in the command can be formatted like attribute=value or attribute="value of attribute"
+        //parse these and put their values into a map key: attributeName, value: Pair<value, isExactMatch>
+        //first set of values to look for are ([a-zA-Z]\w+=\w+) then ([a-zA-Z]\w+="[\w\s]+")
+        var attribs = new HashMap<String, Pair<String, Boolean>>();
+
+        var attribRegex = Pattern.compile("([a-zA-Z]\\w+)=(\\w+)|([a-zA-Z]\\w+)=\"([\\w\\s]+)\"");
+        var matcher = attribRegex.matcher(context.getRawCommandString());
+        while (matcher.find()) {
+            var attrib = matcher.group(1);
+            var value = matcher.group(2);
+            if (attrib == null) {
+                attrib = matcher.group(3);
+                value = matcher.group(4);
+            }
+            attribs.put(attrib, Pair.of(value, !value.contains(" ")));
+        }
+
+        var lookInWorld = world != null ? world.getWorldUuid() : context.isPlayer() ? context.asPlayer().getWorld().getUID() : null;
+
+        if (radius != -1) {
+            if (!context.isPlayer()) context.error("You must be a player to use the -radius flag.");
+            if (lookInWorld == null) context.error("You must specify a valid world to use the -radius flag.");
+            if (!lookInWorld.equals(context.asPlayer().getWorld().getUID())) context.error("You must be in the same world as the plots you are looking for to use the -radius flag.");
+        }
+
+        var plotService = transaction.getService(IPlotService.class);
+        var plotsRes = await(plotService.getPlots((p) -> {
+            if (lookInWorld != null && !p.getLocation().getWorld().getUID().equals(lookInWorld)) return false;
+            if (radius != -1 && p.getLocation().distanceSquared(context.getLocation()) > radius * radius) return false;
+            if (group != null && !p.getPlotGroup().getName().equalsIgnoreCase(group.getName())) return false;
+            if (parent != null && p.getParent() != null && p.getParent().getId() != parent.getId()) return false;
+            if (user != null && !p.getUsers().contains(user)) return false;
+            return true;
+        }));
+
+        if (!plotsRes.successful()) context.error(plotsRes.message());
+
+        List<Plot> plots = new ArrayList<>(plotsRes.getOrThrow());
+
+        //we want to sort by distance if its in the same world, otherwise sort by plot id
+        if (lookInWorld != null && lookInWorld.equals(context.getLocation().getWorld().getUID())) {
+            plots.sort(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(context.getLocation())));
+        } else {
+            plots.sort(Comparator.comparingInt(Plot::getId));
+        }
+
+        //now we want to filter by attributes
+        plots = plots.stream().filter(p -> {
+            for (var entry : attribs.entrySet()) {
+                var attrib = entry.getKey();
+                var value = entry.getValue().getFirst();
+                var exact = entry.getValue().getSecond();
+                var attr = p.getAttribute(attrib);
+                if (attr == null) return false;
+                if (exact && !attr.getValue().equalsIgnoreCase(value)) return false;
+                if (!exact && !attr.getValue().toLowerCase().contains(value.toLowerCase())) return false;
+            }
+            return true;
+        }).toList();
+
+        var listMenu = plotListPaginator.generatePage(context, plots, page);
+        if (listMenu != null) listMenu.sendTo(context.getSender());
+        else context.error("No data to show.");
+    }
+
+    // /plot goto <plotId>
+    private void gotoPlot(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var providedPlotId = context.integerAt(1, -1);
+        var plot = await(transaction.getService(IPlotService.class).getPlot(providedPlotId));
+        if (!plot.successful()) {
+            context.error(plot.message());
+        } else {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                context.asEntity().teleport(plot.getOrThrow().getLocation());
+                context.send(Text.of("[PlotManager] ").setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot("Teleported to plot ").setColor(ColorUtils.REGULAR_TEXT).appendRoot("#" + providedPlotId).setColor(ColorUtils.HIGHLIGHT_TEXT).appendRoot(".").setColor(ColorUtils.REGULAR_TEXT));
+            });
+        }
+    }
+
+    private void plotInfo(IServiceTransaction transaction, CommandContextWrapper context) throws PDKCommandException {
+        var plot = context.resolvePlot();
+        var page = context.getFlag("page", 1);
+        List<PlotChatListItems.PlotChatListItem> items;
+        if (context.hasFlag("users")) items = PlotChatListItems.getPlotUserList(plot);
+        else items = PlotChatListItems.getListItemsForPlot(configService.getRequiredPlotAttributes(), transaction.getService(IAttributeService.class), configService, plot, true);
+        var res = plotInfoMenuPaginator.generatePage(context, items, page);
+        if (res == null) context.error("No data to show.");
+        else res.sendTo(context.getSender());
+    }
+
+    private static String trimToLength(String input, int maxPixels) {
+        var pixelWidth = MinecraftFont.Font.getWidth(input);
+        if (pixelWidth <= maxPixels) return input;
+        var trimmed = input;
+        while (pixelWidth > maxPixels) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+            pixelWidth = MinecraftFont.Font.getWidth(trimmed);
+        }
+        return trimmed;
     }
 }

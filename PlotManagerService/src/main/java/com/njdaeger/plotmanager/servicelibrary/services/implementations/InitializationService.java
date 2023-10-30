@@ -95,12 +95,10 @@ public class InitializationService implements Runnable {
         var attributeService = transaction.getService(IAttributeService.class);
         var plotService = transaction.getService(IPlotService.class);
 
-        awaitAll(
-                userService.getSystemUser(),
-                worldService.getWorlds(),
-                attributeService.getAttributes(),
-                plotService.getPlots()
-        );
+        await(userService.initializeCache());
+        await(worldService.initializeCache());
+        await(attributeService.initializeCache());
+        await(plotService.initializeCache());
         logger.info("Warmup complete!");
     }
 

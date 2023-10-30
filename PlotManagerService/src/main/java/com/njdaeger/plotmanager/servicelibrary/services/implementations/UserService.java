@@ -42,6 +42,24 @@ public class UserService implements IUserService {
     }
 
     @Override
+    public CompletableFuture<Result<User>> getUserById(int id) {
+        transaction.use();
+        if (cacheService.getUserCache().values().stream().anyMatch(user -> user.getId() == id)) {
+            transaction.release();
+            return CompletableFuture.completedFuture(Result.good(cacheService.getUserCache().values().stream().filter(user -> user.getId() == id).findFirst().orElse(null)));
+        }
+
+        return transaction.getUnitOfWork().repo(IUserRepository.class).getUserById(id).thenApply(user -> {
+            transaction.release();
+            if (user == null) return Result.bad("User not found.");
+            var uuid = UUID.fromString(user.getUuid());
+            var newUser = new User(user.getId(), uuid, user.getUsername());
+            cacheService.getUserCache().put(uuid, newUser);
+            return Result.good(newUser);
+        });
+    }
+
+    @Override
     public CompletableFuture<Result<User>> getUserByUuid(UUID userId) {
         transaction.use();
         if (cacheService.getUserCache().containsKey(userId)) {
@@ -64,7 +82,7 @@ public class UserService implements IUserService {
         transaction.use();
         if (cacheService.getUserCache().values().stream().anyMatch(user -> user.getLastKnownName().equalsIgnoreCase(username))) {
             transaction.release();
-            return CompletableFuture.completedFuture(Result.good(List.copyOf(cacheService.getUserCache().values())));
+            return CompletableFuture.completedFuture(Result.good(List.copyOf(cacheService.getUserCache().values().stream().filter(user -> user.getLastKnownName().equalsIgnoreCase(username)).toList())));
         }
 
         return transaction.getUnitOfWork().repo(IUserRepository.class).getUsersByUsername(username).thenApply(users -> {
@@ -185,5 +203,24 @@ public class UserService implements IUserService {
             cacheService.getUserCache().remove(uuidOfUserToDelete);
             return Result.good(oldUser);
         });
+    }
+
+    @Override
+    public void clearCache() {
+        cacheService.getUserCache().clear();
+    }
+
+    @Override
+    public CompletableFuture<Void> initializeCache() {
+        transaction.use();
+
+        return transaction.getUnitOfWork().repo(IUserRepository.class).getUsers().thenApply(users -> {
+            transaction.release();
+            users.forEach(user -> {
+                var uuid = UUID.fromString(user.getUuid());
+                cacheService.getUserCache().put(uuid, new User(user.getId(), uuid, user.getUsername()));
+            });
+            return Result.good(List.copyOf(cacheService.getUserCache().values()));
+        }).thenAccept(r -> {});
     }
 }

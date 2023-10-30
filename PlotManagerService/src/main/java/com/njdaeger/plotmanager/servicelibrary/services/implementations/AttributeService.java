@@ -226,4 +226,20 @@ public class AttributeService implements IAttributeService {
             return Result.good(oldAttribute);
         });
     }
+
+    @Override
+    public void clearCache() {
+        cacheService.getAttributeCache().clear();
+    }
+
+    @Override
+    public CompletableFuture<Void> initializeCache() {
+        transaction.use();
+
+        return transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributes().thenApply(attributes -> {
+            transaction.release();
+            attributes.forEach(attribute -> cacheService.getAttributeCache().put(attribute.getName(), new Attribute(attribute.getId(), attribute.getName(), attribute.getType())));
+            return Result.good(List.copyOf(cacheService.getAttributeCache().values()));
+        }).thenAccept((r) -> {});
+    }
 }

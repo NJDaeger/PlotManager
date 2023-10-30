@@ -9,13 +9,20 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public interface IUserService extends ITransactionalService {
+public interface IUserService extends ITransactionalService, ICached {
 
     /**
      * Get all users
      * @return A result with a list of users if successful, or a result with an empty list if the user retrieval was unsuccessful, or no users found.
      */
     CompletableFuture<Result<List<User>>> getUsers();
+
+    /**
+     * Get a user by their id
+     * @param id The id of the user to get
+     * @return A result with the user if successful, or a result with null if the user retrieval was unsuccessful, or no user found.
+     */
+    CompletableFuture<Result<User>> getUserById(int id);
 
     /**
      * Get a user by their uuid

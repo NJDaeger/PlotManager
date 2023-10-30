@@ -4,15 +4,26 @@ import com.njdaeger.pdk.command.CommandContext;
 import com.njdaeger.pdk.command.exception.PDKCommandException;
 import com.njdaeger.pdk.utils.text.Text;
 import com.njdaeger.plotmanager.dataaccess.Util;
+import com.njdaeger.plotmanager.servicelibrary.models.Plot;
+import com.njdaeger.plotmanager.servicelibrary.models.User;
+import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
+import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
+import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
+import org.bukkit.Bukkit;
 
 import java.util.UUID;
 import java.util.function.Predicate;
 
+import static com.njdaeger.plotmanager.dataaccess.Util.await;
+
 public class CommandContextWrapper extends CommandContext {
 
-    public CommandContextWrapper(CommandContext context) throws NoSuchFieldException, IllegalAccessException {
+    private IServiceTransaction transaction;
+
+    public CommandContextWrapper(CommandContext context, IServiceTransaction transaction) throws NoSuchFieldException, IllegalAccessException {
         super(context.getPlugin(), context.getCommand(), context.getSender(), context.getAlias(), context.getRawCommandString().split(" "));
         copyContext(context);
+        this.transaction = transaction;
     }
 
     private void copyContext(CommandContext context) throws NoSuchFieldException, IllegalAccessException {
@@ -56,6 +67,32 @@ public class CommandContextWrapper extends CommandContext {
         var res = argAt(index);
         if (res == null) throw new PDKCommandException(message);
         return res;
+    }
+
+    public Plot resolvePlot() throws PDKCommandException {
+        var plot = this.<Plot>getFlag("plot");
+        if (plot == null && hasFlag("plot")) error("No plots found with provided id.");
+        var plotService = transaction.getService(IPlotService.class);
+        if (plot == null) plot = await(plotService.getNearestPlotInRadius(getLocation(), 10)).getOrThrow(new PDKCommandException("No plots found nearby. (10 block radius)"));
+        return plot;
+    }
+
+    public Plot resolvePlotUnchecked() {
+        var plot = this.<Plot>getFlag("plot");
+        if (plot == null && hasFlag("plot")) return null;
+        var plotService = transaction.getService(IPlotService.class);
+        if (plot == null) plot = await(plotService.getNearestPlot(getLocation())).get();
+        return plot;
+    }
+
+    public User resolveUser(String username) throws PDKCommandException {
+        var userService = transaction.getService(IUserService.class);
+        var usersFound = await(userService.getUserByName(username)).getOrThrow(new PDKCommandException("No users found with provided name."));
+        if (usersFound.isEmpty()) error("No user found with the username " + username + ".");
+        if (usersFound.size() > 1) usersFound = usersFound.stream().filter(u -> Bukkit.getServer().getOfflinePlayer(u.getUserId()).isOnline()).toList();
+        if (usersFound.isEmpty()) error("There have been multiple users last seen with username " + username + ", but none of them are online. Have that user join the server continue your action.");
+
+        return usersFound.get(0);
     }
 
 }

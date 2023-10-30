@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public interface IWorldService extends ITransactionalService {
+public interface IWorldService extends ITransactionalService, ICached {
 
     /**
      * Get all worlds

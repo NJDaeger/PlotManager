@@ -295,8 +295,35 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
+    public Pair<String, Map<String, Object>> restorePlotUser(int restoredBy, int plotId, int userId) {
+        return Pair.of("update PlotUsers set deleted = 0, modifiedBy = ? where plotId = ? and userId = ?", Map.of(
+                "1", restoredBy,
+                "2", plotId,
+                "3", userId
+        ));
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> selectPlotUser(int plotId, int userId) {
+        return Pair.of("select * from PlotUsers where plotId = ? and userId = ?", Map.of(
+                "1", plotId,
+                "2", userId
+        ));
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> selectPlotUserById(int plotUserId) {
+        return Pair.of("select * from PlotUsers where id = ?", Map.of("1", plotUserId));
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> selectPlotUsersForPlot(int plotId) {
+        return Pair.of("select * from PlotUsers where plotId = ?", Map.of("1", plotId));
+    }
+
+    @Override
     public Pair<String, Map<String, Object>> deletePlotUser(int deletedBy, int plotId, int userId) {
-        return Pair.of("delete from PlotUsers where plotId = ? and userId = ?", Map.of(
+        return Pair.of("update PlotUsers set deleted = 1 where plotId = ? and userId = ?", Map.of(
                 "1", plotId,
                 "2", userId
         ));

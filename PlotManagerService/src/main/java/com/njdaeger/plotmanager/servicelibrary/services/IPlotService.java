@@ -5,6 +5,7 @@ import com.njdaeger.plotmanager.servicelibrary.Result;
 import com.njdaeger.plotmanager.servicelibrary.models.Plot;
 import com.njdaeger.plotmanager.servicelibrary.models.PlotAttribute;
 import com.njdaeger.plotmanager.servicelibrary.models.PlotGroup;
+import com.njdaeger.plotmanager.servicelibrary.models.PlotUser;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
 import com.njdaeger.plotmanager.servicelibrary.transactional.ITransactionalService;
 import org.bukkit.Location;
@@ -15,7 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
-public interface IPlotService extends ITransactionalService {
+public interface IPlotService extends ITransactionalService, ICached {
 
     /**
      * Creates a draft plot at the given location. no attributes are assigned to this plot, no people can be assigned to this plot
@@ -81,6 +82,17 @@ public interface IPlotService extends ITransactionalService {
         return getPlots(plot -> plot.getLocation().getWorld().getUID().equals(location.getWorld().getUID())).thenApply(r -> {
             if (r.successful()) {
                 var res = r.getOrThrow().stream().min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(location)));
+                return res.map(Result::good).orElseGet(() -> Result.bad("No plots found."));
+            }
+            return Result.bad(r.message());
+        });
+    }
+
+    default CompletableFuture<Result<Plot>> getNearestPlotInRadius(Location location, int maxDistance) {
+        if (location == null) return CompletableFuture.completedFuture(Result.bad("Location cannot be null."));
+        return getPlots(plot -> plot.getLocation().getWorld().getUID().equals(location.getWorld().getUID())).thenApply(r -> {
+            if (r.successful()) {
+                var res = r.getOrThrow().stream().filter(p -> p.getLocation().distanceSquared(location) <= maxDistance * maxDistance).min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(location)));
                 return res.map(Result::good).orElseGet(() -> Result.bad("No plots found."));
             }
             return Result.bad(r.message());
@@ -233,7 +245,7 @@ public interface IPlotService extends ITransactionalService {
      * @param plotId The id of the plot
      * @return A result with a list of users if successful, or a result with an empty list if the user retrieval was unsuccessful.
      */
-    default CompletableFuture<Result<List<User>>> getPlotUsers(int plotId) {
+    default CompletableFuture<Result<List<PlotUser>>> getPlotUsers(int plotId) {
         return getPlot(plotId).thenApply(r -> {
             if (r.successful()) {
                 var plot = r.getOrThrow();

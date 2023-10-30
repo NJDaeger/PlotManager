@@ -1,12 +1,14 @@
 package com.njdaeger.plotmanager.servicelibrary.services.implementations;
 
 import com.njdaeger.plotmanager.dataaccess.Util;
+import com.njdaeger.plotmanager.dataaccess.models.PlotAttributeEntity;
 import com.njdaeger.plotmanager.dataaccess.repositories.IPlotRepository;
 import com.njdaeger.plotmanager.servicelibrary.PlotBuilder;
 import com.njdaeger.plotmanager.servicelibrary.Result;
 import com.njdaeger.plotmanager.servicelibrary.models.Attribute;
 import com.njdaeger.plotmanager.servicelibrary.models.Plot;
 import com.njdaeger.plotmanager.servicelibrary.models.PlotAttribute;
+import com.njdaeger.plotmanager.servicelibrary.models.PlotUser;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
 import com.njdaeger.plotmanager.servicelibrary.models.World;
 import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
@@ -109,7 +111,7 @@ public class PlotService implements IPlotService {
             var required = new ArrayList<>(configService.getRequiredPlotAttributes());
 
             if (!required.stream().allMatch(plotBuilder::hasAttribute)) {
-                var missing = String.join(", ", configService.getRequiredPlotAttributes());
+                var missing = String.join(", ", configService.getRequiredPlotAttributes().stream().filter(attr -> !plotBuilder.hasAttribute(attr)).toList());
                 return Result.bad("Missing required attributes: " + missing);
             }
 
@@ -139,7 +141,7 @@ public class PlotService implements IPlotService {
                 await(plotRepo.updatePlotParent(userId, plotEntity.getId(), plotBuilder.getParent().getId()));
             }
 
-            var createdPlot = new Plot(plotEntity.getId(), location, plotBuilder.getAttributes(), List.of(), plotBuilder.getParent(), null);
+            var createdPlot = new Plot(plotEntity.getId(), location, plotBuilder.getAttributes(), List.of(), plotBuilder.getParent(), null, false);
             cacheService.getPlotBuilderCache().remove(creator);
             cacheService.getPlotCache().put(plotEntity.getId(), createdPlot);
 
@@ -179,8 +181,19 @@ public class PlotService implements IPlotService {
                 Plot parent = null;
                 if (plotEntity.getParent() != null) parent = await(getPlot(plotEntity.getParent())).getOr(null);
 
-                //todo: get plot group and users
-                var plot = new Plot(plotEntity.getId(), new Location(world, plotEntity.getX(), plotEntity.getY(), plotEntity.getZ()), attributes, List.of(), parent, null);
+                var users = await(plotRepo.getPlotUsersForPlot(plotEntity.getId()).thenApply(userEntities -> {
+                    if (userEntities == null || userEntities.isEmpty()) return List.<PlotUser>of();
+
+                    return userEntities.stream().map(userEntity -> {
+                        var user = await(userService.getUserById(userEntity.getUser()));
+                        if (!user.successful()) return null;
+                        var userObj = user.getOrThrow();
+                        return new PlotUser(userEntity.getId(), userObj, userEntity.isDeleted());
+                    }).filter(Objects::nonNull).toList();
+                }));
+
+                //todo: get plot group
+                var plot = new Plot(plotEntity.getId(), new Location(world, plotEntity.getX(), plotEntity.getY(), plotEntity.getZ()), attributes, users, parent, null, plotEntity.isDeleted());
                 cacheService.getPlotCache().put(plotEntity.getId(), plot);
             }
             return Result.good(plots);
@@ -216,8 +229,19 @@ public class PlotService implements IPlotService {
             Plot parent = null;
             if (plotEntity.getParent() != null) parent = await(getPlot(plotEntity.getParent())).getOr(null);
 
-            //todo: get plot group and users
-            var plot = new Plot(plotEntity.getId(), new Location(bukkitWorld, plotEntity.getX(), plotEntity.getY(), plotEntity.getZ()), attributes, List.of(), parent, null);
+            var users = await(plotRepo.getPlotUsersForPlot(plotEntity.getId()).thenApply(userEntities -> {
+                if (userEntities == null || userEntities.isEmpty()) return List.<PlotUser>of();
+
+                return userEntities.stream().map(userEntity -> {
+                    var user = await(userService.getUserById(userEntity.getUser()));
+                    if (!user.successful()) return null;
+                    var userObj = user.getOrThrow();
+                    return new PlotUser(userEntity.getId(), userObj, userEntity.isDeleted());
+                }).filter(Objects::nonNull).toList();
+            }));
+
+            //todo: get plot group
+            var plot = new Plot(plotEntity.getId(), new Location(bukkitWorld, plotEntity.getX(), plotEntity.getY(), plotEntity.getZ()), attributes, users, parent, null, plotEntity.isDeleted());
             cacheService.getPlotCache().put(plotEntity.getId(), plot);
             return Result.good(plot);
         }).whenComplete(finishTransaction());
@@ -243,7 +267,7 @@ public class PlotService implements IPlotService {
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).updatePlotLocation(userId, plotId, worldId, newLocation.getBlockX(), newLocation.getBlockY(), newLocation.getBlockZ()).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
-                var newPlot = new Plot(plot.getId(), newLocation, plot.getAttributes(), plot.getUsers(), plot.getParent(), plot.getPlotGroup());
+                var newPlot = new Plot(plot.getId(), newLocation, plot.getAttributes(), plot.getUsers(), plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -269,7 +293,7 @@ public class PlotService implements IPlotService {
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).updatePlotParent(userId, plotId, parentId).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), parent, plot.getPlotGroup());
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), parent, plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -292,7 +316,7 @@ public class PlotService implements IPlotService {
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).updatePlotParent(userId, plotId, null).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), null, plot.getPlotGroup());
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), null, plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -318,7 +342,7 @@ public class PlotService implements IPlotService {
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).updatePlotGroup(userId, plotId, group.getId()).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), group);
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), group, plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -341,7 +365,7 @@ public class PlotService implements IPlotService {
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).updatePlotGroup(userId, plotId, null).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), null);
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), null, plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -368,13 +392,17 @@ public class PlotService implements IPlotService {
 
             if (!type.isValidValue(value)) return Result.bad("Value " + value + " is not valid for attribute type " + type.getName() + ".");
 
-            return await(transaction.getUnitOfWork().repo(IPlotRepository.class).insertPlotAttribute(userId, plotId, attribute.getId(), value).thenApply(success -> {
+            CompletableFuture<PlotAttributeEntity> insertOrUpdate;
+            if (plot.getAttribute(attributeName) == null) insertOrUpdate = transaction.getUnitOfWork().repo(IPlotRepository.class).insertPlotAttribute(userId, plotId, attribute.getId(), value);
+            else insertOrUpdate = transaction.getUnitOfWork().repo(IPlotRepository.class).updatePlotAttribute(userId, plotId, attribute.getId(), value);
+
+            return await(insertOrUpdate.thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
                 var newAttributes = new ArrayList<>(plot.getAttributes());
                 newAttributes.removeIf(attr -> attr.getAttribute().equalsIgnoreCase(attributeName));
                 newAttributes.add(new PlotAttribute(attributeName, value));
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), newAttributes, plot.getUsers(), plot.getParent(), plot.getPlotGroup());
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), newAttributes, plot.getUsers(), plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -404,7 +432,7 @@ public class PlotService implements IPlotService {
                 var res = newAttributes.removeIf(attr -> attr.getAttribute().equalsIgnoreCase(attributeName));
                 if (!res) return Result.bad("Failed to remove attribute " + attributeName + " from plot. Did not find attribute in plot attribute list.");
 
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), newAttributes, plot.getUsers(), plot.getParent(), plot.getPlotGroup());
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), newAttributes, plot.getUsers(), plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -441,13 +469,27 @@ public class PlotService implements IPlotService {
             var addedUser = await(userService.getUserByUuid(userId)).get();
             if (addedUser == null) return Result.bad("Failed to find user with uuid " + userId + ".");
 
+            var foundUser = plot.getUser(userId);
+            if (foundUser != null) {
+                if (!foundUser.isDeleted()) return Result.bad("User " + addedUser.getLastKnownName() + " is already a plot member.");
+                return await(transaction.getUnitOfWork().repo(IPlotRepository.class).restorePlotUser(modifiedUser.getId(), plotId, addedUser.getId()).thenApply(success -> {
+                    if (success == null) return Result.bad("Failed to update plot.");
+
+                    var newUsers = new ArrayList<>(plot.getUsers());
+                    newUsers.removeIf(user -> user.getUser().getUserId().equals(userId));
+                    newUsers.add(new PlotUser(success.getId(), addedUser, success.isDeleted()));
+                    var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), newUsers, plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
+                    cacheService.getPlotCache().put(plot.getId(), newPlot);
+                    return Result.good(newPlot);
+                }));
+            }
+
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).insertPlotUser(modifiedUser.getId(), plotId, addedUser.getId()).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
                 var newUsers = new ArrayList<>(plot.getUsers());
-                newUsers.removeIf(user -> user.getUserId().equals(userId));
-                newUsers.add(new User(addedUser.getId(), addedUser.getUserId(), addedUser.getLastKnownName()));
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), newUsers, plot.getParent(), plot.getPlotGroup());
+                newUsers.add(new PlotUser(success.getId(), addedUser, success.isDeleted()));
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), newUsers, plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -469,14 +511,17 @@ public class PlotService implements IPlotService {
             var removedUser = await(userService.getUserByUuid(userId)).get();
             if (removedUser == null) return Result.bad("Failed to find user with uuid " + userId + ".");
 
+            if (plot.getUser(userId) == null) return Result.bad("User " + removedUser.getLastKnownName() + " is not a plot member.");
+
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).deletePlotUser(modifiedUser.getId(), plotId, removedUser.getId()).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
                 var newUsers = new ArrayList<>(plot.getUsers());
-                var removed = newUsers.removeIf(user -> user.getUserId().equals(userId));
-                if (!removed) return Result.bad("Failed to remove user from plot. Did not find user with uuid " + userId + " in plot user list.");
+                newUsers.removeIf(user -> user.getUser().getUserId().equals(userId));
+                newUsers.add(new PlotUser(success.getId(), removedUser, success.isDeleted()));
+                if (!success.isDeleted()) return Result.bad("Failed to remove user from plot. Did not find user with uuid " + userId + " in plot user list.");
 
-                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), newUsers, plot.getParent(), plot.getPlotGroup());
+                var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), newUsers, plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -496,9 +541,9 @@ public class PlotService implements IPlotService {
             if (deletedUser == null) return Result.bad("Failed to find user with uuid " + deletedBy + ".");
 
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).deletePlot(deletedUser.getId(), plotId).thenApply(success -> {
-                if (success == -1) return Result.bad("Failed to delete plot.");
+                if (success == null) return Result.bad("Failed to delete plot.");
 
-                cacheService.getPlotCache().remove(plotId);
+                cacheService.getPlotCache().put(plotId, new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), plot.getPlotGroup(), true));
                 return Result.good(plot);
             }));
         }).whenComplete(finishTransaction());
@@ -511,5 +556,15 @@ public class PlotService implements IPlotService {
             if (!r.successful()) transaction.abort();
             transaction.release();
         };
+    }
+
+    @Override
+    public void clearCache() {
+        cacheService.getPlotCache().clear();
+    }
+
+    @Override
+    public CompletableFuture<Void> initializeCache() {
+        return getPlots().thenAccept((r) -> {});
     }
 }

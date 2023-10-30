@@ -3,8 +3,10 @@ package com.njdaeger.plotmanager.dataaccess.repositories.implementations;
 import com.njdaeger.plotmanager.dataaccess.IProcedure;
 import com.njdaeger.plotmanager.dataaccess.models.PlotAttributeEntity;
 import com.njdaeger.plotmanager.dataaccess.models.PlotEntity;
+import com.njdaeger.plotmanager.dataaccess.models.PlotUserEntity;
 import com.njdaeger.plotmanager.dataaccess.repositories.IPlotRepository;
 import com.njdaeger.plotmanager.dataaccess.transactional.AbstractDatabaseTransaction;
+import com.njdaeger.plotmanager.dataaccess.transactional.ExecutionConstants;
 import com.njdaeger.pluginlogger.IPluginLogger;
 
 import java.util.List;
@@ -62,7 +64,7 @@ public class PlotRepository implements IPlotRepository {
             try {
                 var proc = procedures.insertPlot(createdBy, worldId, x, y, z);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
                 return await(getPlotById(id));
             } catch (Exception e) {
                 logger.exception(e);
@@ -77,8 +79,8 @@ public class PlotRepository implements IPlotRepository {
             try {
                 var proc = procedures.updatePlotLocation(updatedBy, plotId, newWorldId, newX, newY, newZ);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
-                return await(getPlotById(id));
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return await(getPlotById(plotId));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;
@@ -92,8 +94,8 @@ public class PlotRepository implements IPlotRepository {
             try {
                 var proc = procedures.updatePlotParent(updatedBy, plotId, newParentId);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
-                return await(getPlotById(id));
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return await(getPlotById(plotId));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;
@@ -107,8 +109,8 @@ public class PlotRepository implements IPlotRepository {
             try {
                 var proc = procedures.updatePlotGroup(updatedBy, plotId, newGroupId);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
-                return await(getPlotById(id));
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return await(getPlotById(plotId));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;
@@ -117,13 +119,13 @@ public class PlotRepository implements IPlotRepository {
     }
 
     @Override
-    public CompletableFuture<PlotEntity> insertPlotUser(int insertedBy, int plotId, int userId) {
+    public CompletableFuture<PlotUserEntity> insertPlotUser(int insertedBy, int plotId, int userId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var proc = procedures.insertPlotUser(insertedBy, plotId, userId);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
-                return await(getPlotById(id));
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return await(getPlotUserById(id));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;
@@ -132,13 +134,29 @@ public class PlotRepository implements IPlotRepository {
     }
 
     @Override
-    public CompletableFuture<PlotEntity> deletePlotUser(int deletedBy, int plotId, int userId) {
+    public CompletableFuture<PlotUserEntity> restorePlotUser(int restoredBy, int plotId, int userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.restorePlotUser(restoredBy, plotId, userId);
+                var id = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return await(getPlotUser(plotId, userId));
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotUserEntity> deletePlotUser(int deletedBy, int plotId, int userId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var proc = procedures.deletePlotUser(deletedBy, plotId, userId);
+                var existing = await(getPlotUser(plotId, userId));
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
-                return await(getPlotById(id));
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return existing;
             } catch (Exception e) {
                 logger.exception(e);
                 return null;
@@ -147,14 +165,56 @@ public class PlotRepository implements IPlotRepository {
     }
 
     @Override
-    public CompletableFuture<Integer> deletePlot(int deletedBy, int plotId) {
+    public CompletableFuture<PlotUserEntity> getPlotUser(int plotId, int userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlotUser(plotId, userId);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotUserEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotUserEntity> getPlotUserById(int plotUserId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlotUserById(plotUserId);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), PlotUserEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<PlotUserEntity>> getPlotUsersForPlot(int plotId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectPlotUsersForPlot(plotId);
+                return transaction.query(proc.getFirst(), proc.getSecond(), PlotUserEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return List.of();
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<PlotEntity> deletePlot(int deletedBy, int plotId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var proc = procedures.deletePlot(deletedBy, plotId);
-                return transaction.execute(proc.getFirst(), proc.getSecond());
+                var plot = await(getPlotById(plotId));
+                var res = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (res == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return plot;
             } catch (Exception e) {
                 logger.exception(e);
-                return -1;
+                return null;
             }
         });
     }
@@ -204,7 +264,7 @@ public class PlotRepository implements IPlotRepository {
             try {
                 var proc = procedures.insertPlotAttribute(createdBy, plotId, attributeId, value);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
                 return await(getPlotAttributeForPlotById(id));
             } catch (Exception e) {
                 logger.exception(e);
@@ -219,8 +279,8 @@ public class PlotRepository implements IPlotRepository {
             try {
                 var proc = procedures.updatePlotAttribute(updatedBy, plotId, attributeId, value);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
-                if (id == -1) return null;
-                return await(getPlotAttributeForPlotById(id));
+                if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return await(getPlotAttributeForPlotByAttributeId(plotId, attributeId));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;
@@ -229,14 +289,17 @@ public class PlotRepository implements IPlotRepository {
     }
 
     @Override
-    public CompletableFuture<Integer> deletePlotAttribute(int deletedBy, int plotId, int attributeId) {
+    public CompletableFuture<PlotAttributeEntity> deletePlotAttribute(int deletedBy, int plotId, int attributeId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var proc = procedures.deletePlotAttribute(deletedBy, plotId, attributeId);
-                return transaction.execute(proc.getFirst(), proc.getSecond());
+                var existing = await(getPlotAttributeForPlotByAttributeId(plotId, attributeId));
+                var res = transaction.execute(proc.getFirst(), proc.getSecond());
+                if (res == ExecutionConstants.NO_ROWS_AFFECTED) return null;
+                return existing;
             } catch (Exception e) {
                 logger.exception(e);
-                return -1;
+                return null;
             }
         });
     }

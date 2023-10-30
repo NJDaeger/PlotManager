@@ -3,6 +3,7 @@ package com.njdaeger.plotmanager.dataaccess.repositories;
 import com.njdaeger.plotmanager.dataaccess.IRepository;
 import com.njdaeger.plotmanager.dataaccess.models.PlotAttributeEntity;
 import com.njdaeger.plotmanager.dataaccess.models.PlotEntity;
+import com.njdaeger.plotmanager.dataaccess.models.PlotUserEntity;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -65,29 +66,63 @@ public interface IPlotRepository extends IRepository {
 
     /**
      * Adds a user to a plot
+     *
      * @param insertedBy The id of the user who inserted this plot user
      * @param plotId The id of the plot to insert the user into
      * @param userId The id of the user to insert into the plot
-     * @return The updated plot, or null if no plot was updated
+     * @return The inserted plot user, or null if no user was inserted
      */
-    CompletableFuture<PlotEntity> insertPlotUser(int insertedBy, int plotId, int userId);
+    CompletableFuture<PlotUserEntity> insertPlotUser(int insertedBy, int plotId, int userId);
+
+    /**
+     * Restores a user to a plot
+     *
+     * @param restoredBy The id of the user who restored this plot user
+     * @param plotId The id of the plot to restore the user to
+     * @param userId The id of the user to restore to the plot
+     * @return The restored plot user, or null if no user was restored
+     */
+    CompletableFuture<PlotUserEntity> restorePlotUser(int restoredBy, int plotId, int userId);
 
     /**
      * Removes a user from a plot
+     *
      * @param deletedBy The id of the user who deleted this plot user
      * @param plotId The id of the plot to delete the user from
      * @param userId The id of the user to delete from the plot
-     * @return The updated plot, or null if no plot was updated
+     * @return The deleted plot user, or null if no user was deleted
      */
-    CompletableFuture<PlotEntity> deletePlotUser(int deletedBy, int plotId, int userId);
+    CompletableFuture<PlotUserEntity> deletePlotUser(int deletedBy, int plotId, int userId);
+
+    /**
+     * Get a plot user
+     * @param plotId The id of the plot
+     * @param userId The id of the user
+     * @return The plot user
+     */
+    CompletableFuture<PlotUserEntity> getPlotUser(int plotId, int userId);
+
+    /**
+     * Get a plot user by its id
+     * @param plotUserId The id of the plot user
+     * @return The plot user
+     */
+    CompletableFuture<PlotUserEntity> getPlotUserById(int plotUserId);
+
+    /**
+     * Get all plot users
+     * @return A list of plot users
+     */
+    CompletableFuture<List<PlotUserEntity>> getPlotUsersForPlot(int plotId);
 
     /**
      * Delete a plot
+     *
      * @param deletedBy The id of the user who deleted this plot
      * @param plotId The id of the plot to delete
      * @return The deleted plot id, or -1 if no plot was deleted
      */
-    CompletableFuture<Integer> deletePlot(int deletedBy, int plotId);
+    CompletableFuture<PlotEntity> deletePlot(int deletedBy, int plotId);
 
     /**
      * Get all attributes for a plot
@@ -133,11 +168,12 @@ public interface IPlotRepository extends IRepository {
 
     /**
      * Delete an attribute for a plot
+     *
      * @param deletedBy The id of the user who deleted this attribute
      * @param plotId The id of the plot
      * @param attributeId The id of the attribute
      * @return The deleted attribute id, or null if no attribute was deleted
      */
-    CompletableFuture<Integer> deletePlotAttribute(int deletedBy, int plotId, int attributeId);
+    CompletableFuture<PlotAttributeEntity> deletePlotAttribute(int deletedBy, int plotId, int attributeId);
 
 }

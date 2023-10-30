@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS Plot
     z int NOT NULL,
     deleted bit NOT NULL DEFAULT 0,
     parentId int,
+    groupId int,
     created bigint NOT NULL DEFAULT unix_timestamp(),
     createdBy int NOT NULL,
     modified bigint NULL,
@@ -14,6 +15,7 @@ CREATE TABLE IF NOT EXISTS Plot
     CONSTRAINT Plot_pk PRIMARY KEY (id),
     CONSTRAINT Plot_worldId_fk FOREIGN KEY (worldId) REFERENCES World (id),
     CONSTRAINT Plot_parentId_fk FOREIGN KEY (parentId) REFERENCES Plot (id),
+    CONSTRAINT Plot_groupId_fk FOREIGN KEY (groupId) REFERENCES `Group` (id),
     CONSTRAINT Plot_createdBy_fk FOREIGN KEY (createdBy) REFERENCES User (id),
     CONSTRAINT Plot_modifiedBy_fk FOREIGN KEY (modifiedBy) REFERENCES User (id)
 )

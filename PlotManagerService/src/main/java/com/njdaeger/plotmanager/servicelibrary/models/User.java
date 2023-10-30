@@ -26,4 +26,9 @@ public class User {
         return id;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof User user)) return false;
+        return user.id == id && user.userId.equals(userId);
+    }
 }

@@ -75,6 +75,14 @@ public interface IProcedure {
 
     Pair<String, Map<String, Object>> insertPlotUser(int insertedBy, int plotId, int userId);
 
+    Pair<String, Map<String, Object>> restorePlotUser(int restoredBy, int plotId, int userId);
+
+    Pair<String, Map<String, Object>> selectPlotUser(int plotId, int userId);
+
+    Pair<String, Map<String, Object>> selectPlotUserById(int plotUserId);
+
+    Pair<String, Map<String, Object>> selectPlotUsersForPlot(int plotId);
+
     Pair<String, Map<String, Object>> deletePlotUser(int deletedBy, int plotId, int userId);
 
     Pair<String, Map<String, Object>> deletePlot(int deletedBy, int plotId);

@@ -12,9 +12,10 @@ public class Plot {
     private PlotGroup plotGroup;
     private Location location;
     private List<PlotAttribute> attributes;
-    private List<User> users;
+    private List<PlotUser> users;
+    private boolean deleted;
 
-    public Plot(int id, Location location, List<PlotAttribute> attributes, List<User> users, Plot parent, PlotGroup plotGroup) {
+    public Plot(int id, Location location, List<PlotAttribute> attributes, List<PlotUser> users, Plot parent, PlotGroup plotGroup, boolean deleted) {
         this.id = id;
         this.location = location;
         this.attributes = attributes;
@@ -43,15 +44,27 @@ public class Plot {
         return plotGroup;
     }
 
-    public List<User> getUsers() {
+    public List<PlotUser> getUsers() {
         return users;
     }
 
-    public User getUser(UUID userId) {
-        return users.stream().filter(user -> user.getUserId().equals(userId)).findFirst().orElse(null);
+    public PlotUser getUser(UUID userId) {
+        return users.stream().filter(user -> user.getUser().getUserId().equals(userId)).findFirst().orElse(null);
+    }
+
+    public boolean hasUser(UUID userId) {
+        return users.stream().anyMatch(user -> user.getUser().getUserId().equals(userId) && !user.isDeleted());
+    }
+
+    public boolean hasAnyActiveUsers() {
+        return users.stream().anyMatch(user -> !user.isDeleted());
     }
 
     public int getId() {
         return id;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
     }
 }

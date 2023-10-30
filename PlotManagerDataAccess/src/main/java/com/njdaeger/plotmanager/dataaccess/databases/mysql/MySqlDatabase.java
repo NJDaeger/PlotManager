@@ -93,7 +93,6 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
             loadTable(transaction, "Plot.sql");
             loadTable(transaction, "PlotAttribute.sql");
             loadTable(transaction, "PlotGroupAttribute.sql");
-            loadTable(transaction, "PlotGroups.sql");
             loadTable(transaction, "PlotUsers.sql");
             commitTransaction(transaction);
 
@@ -104,7 +103,6 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
             loadTrigger(transaction, "PlotTrigger.sql");
             loadTrigger(transaction, "PlotAttributeTrigger.sql");
             loadTrigger(transaction, "PlotGroupAttributeTrigger.sql");
-            loadTrigger(transaction, "PlotGroupsTrigger.sql");
             loadTrigger(transaction, "PlotUsersTrigger.sql");
             commitTransaction(transaction);
 
