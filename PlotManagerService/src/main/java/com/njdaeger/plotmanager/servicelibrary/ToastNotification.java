@@ -86,9 +86,7 @@ public class ToastNotification {
     private void add()	{
         try {
             Bukkit.getUnsafe().loadAdvancement(id, getJson());
-            Bukkit.getLogger().info("Advancement " + id + " saved");
-        } catch (IllegalArgumentException e){
-            Bukkit.getLogger().info("Error while saving, Advancement " + id + " seems to already exist");
+        } catch (IllegalArgumentException ignored){
         }
     }
 

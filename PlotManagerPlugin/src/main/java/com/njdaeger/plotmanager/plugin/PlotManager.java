@@ -3,9 +3,11 @@ package com.njdaeger.plotmanager.plugin;
 import com.njdaeger.plotmanager.plugin.commands.AttributeCommands;
 import com.njdaeger.plotmanager.plugin.commands.PlotCommands;
 import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
+import com.njdaeger.plotmanager.servicelibrary.services.IMarkerService;
 import com.njdaeger.plotmanager.servicelibrary.services.implementations.CacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.implementations.ConfigValidationService;
 import com.njdaeger.plotmanager.servicelibrary.services.implementations.InitializationService;
+import com.njdaeger.plotmanager.servicelibrary.services.implementations.MarkerService;
 import com.njdaeger.pluginlogger.PluginLogger;
 import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.pdk.config.IConfig;
@@ -43,6 +45,7 @@ public class PlotManager extends JavaPlugin implements IPlotManagerPlugin {
                 .addSingleton(IConfig.class, (sp) -> sp.getRequiredService(IConfigService.class))
                 .addSingleton(IPluginLogger.class, PluginLogger.class)
                 .addSingleton(ICacheService.class, CacheService.class)
+                .addSingleton(IMarkerService.class, MarkerService.class)
                 .addSingleton(IProcedure.class, (sp) -> {
                     var type = sp.getRequiredService(IConfigService.class).getDatabaseType();
                     if (type == null) throw new RuntimeException("Database type is null.");

@@ -1,44 +1,67 @@
 package com.njdaeger.plotmanager.dataaccess.databases.mysql;
 
-import com.njdaeger.pluginlogger.IPluginLogger;
 import com.njdaeger.pdk.config.IConfig;
 import com.njdaeger.pdk.config.ISection;
-import com.njdaeger.plotmanager.dataaccess.*;
+import com.njdaeger.plotmanager.dataaccess.DatabaseType;
+import com.njdaeger.plotmanager.dataaccess.IDatabase;
+import com.njdaeger.plotmanager.dataaccess.IProcedure;
+import com.njdaeger.plotmanager.dataaccess.Util;
+import com.njdaeger.pluginlogger.IPluginLogger;
+import org.apache.commons.dbcp2.BasicDataSource;
 
+import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
 
     private final IProcedure procedures;
     private final IPluginLogger logger;
-    private final ISection credentials;
     private boolean successfulLoad;
+    private final DataSource dataSource;
 
     public MySqlDatabase(IConfig config, IProcedure procedures, IPluginLogger logger) {
         this.procedures = procedures;
         this.logger = logger;
-        this.credentials = config.getSection("database.credentials");
+        ISection credentials = config.getSection("database.credentials");
         this.successfulLoad = false;
+        this.dataSource = getDataSource(credentials);
+    }
+
+    private DataSource getDataSource(ISection credentials) {
+        logger.info("Creating connection pool for MySQL database.");
+        var dataSource = new BasicDataSource();
+        dataSource.setDriverClassName("com.mysql.jdbc.Driver");
+        dataSource.setUrl("jdbc:mysql://" + credentials.getString("host") + ":" + credentials.getInt("port") + "/" + credentials.getString("name"));
+        dataSource.setUsername(credentials.getString("user"));
+        dataSource.setPassword(credentials.getString("password"));
+        dataSource.setInitialSize(5);
+        dataSource.setMaxTotal(10);
+        dataSource.setMaxIdle(10);
+        dataSource.setMinIdle(5);
+        dataSource.setMaxWaitMillis(5000);
+        dataSource.setValidationQuery("SELECT 1");
+        dataSource.setTestOnBorrow(true);
+        dataSource.setTestOnReturn(true);
+        dataSource.setTestWhileIdle(true);
+        dataSource.setNumTestsPerEvictionRun(10);
+        dataSource.setTimeBetweenEvictionRunsMillis(30000);
+        dataSource.setMinEvictableIdleTimeMillis(60000);
+        dataSource.setRemoveAbandonedOnBorrow(true);
+        dataSource.setRemoveAbandonedOnMaintenance(true);
+        dataSource.setRemoveAbandonedTimeout(60);
+        dataSource.setLogAbandoned(true);
+        dataSource.setDefaultTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+        dataSource.setAutoCommitOnReturn(false);
+        dataSource.setDefaultAutoCommit(false);
+        logger.info("Connection pool created.");
+        return dataSource;
     }
 
     @Override
     public Connection createConnection() throws Exception {
-        Connection connection;
-
-        var host = credentials.getString("host");
-        var port = credentials.getInt("port");
-        var name = credentials.getString("name");
-        var user = credentials.getString("user");
-        var pass = credentials.getString("password");
-
-        connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + name, user, pass);
-        connection.setAutoCommit(false);
-        connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-        return connection;
-
+        return dataSource.getConnection();
     }
 
     @Override

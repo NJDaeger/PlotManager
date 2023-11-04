@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS PlotGroupAttribute
     id int NOT NULL AUTO_INCREMENT,
     groupId int NOT NULL,
     attributeId int NOT NULL,
-    value varchar(4096) NOT NULL,
+    value nvarchar(4000) NOT NULL,
     deleted bit NOT NULL DEFAULT 0,
     created bigint NOT NULL DEFAULT unix_timestamp(),
     createdBy int NOT NULL,

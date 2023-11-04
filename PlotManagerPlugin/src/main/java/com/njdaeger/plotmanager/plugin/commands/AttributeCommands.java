@@ -107,6 +107,7 @@ public class AttributeCommands {
     private void attributeCommandCompletions(TabContext context) throws PDKCommandException {
         context.completionAt(0, "create", "list", "delete");
         context.subCompletionAt(1, "create", (c) -> c.completion("attribute"));
+        context.subCompletionAt(2, "attribute", (c) -> c.completion(configService.getAttributeTypes().stream().map(AttributeType::getName).toArray(String[]::new)));
 
         context.subCompletionAt(1, "list", (c) -> c.completion("attributes", "types"));
         context.subCompletionAt(1, "delete", (c) -> c.completion("attribute"));

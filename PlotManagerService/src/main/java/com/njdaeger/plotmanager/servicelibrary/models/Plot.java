@@ -22,6 +22,7 @@ public class Plot {
         this.users = users;
         this.parent = parent;
         this.plotGroup = plotGroup;
+        this.deleted = deleted;
     }
 
     public Location getLocation() {
@@ -34,6 +35,11 @@ public class Plot {
 
     public PlotAttribute getAttribute(String attributeName) {
         return attributes.stream().filter(attribute -> attribute.getAttribute().equalsIgnoreCase(attributeName)).findFirst().orElse(null);
+    }
+
+    public String getAttributeValueOrDefault(String attributeName, String defaultValue) {
+        var attribute = getAttribute(attributeName);
+        return attribute == null ? defaultValue : attribute.getValue();
     }
 
     public Plot getParent() {

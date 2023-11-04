@@ -2,6 +2,7 @@ package com.njdaeger.plotmanager.servicelibrary.transactional;
 
 import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
+import com.njdaeger.plotmanager.servicelibrary.services.IMarkerService;
 import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
 import com.njdaeger.plotmanager.servicelibrary.services.implementations.PlotService;
 import com.njdaeger.pluginlogger.IPluginLogger;
@@ -30,7 +31,7 @@ public class ServiceTransaction implements IServiceTransaction {
     private final AtomicInteger refCount = new AtomicInteger(0);
     private final AtomicBoolean canClose = new AtomicBoolean(false);
 
-    public ServiceTransaction(IServiceProvider pluginServiceProvider, Plugin plugin, IPluginLogger logger, IConfigService configService, ICacheService cacheService) {
+    public ServiceTransaction(IServiceProvider pluginServiceProvider, IMarkerService markerService, Plugin plugin, IPluginLogger logger, IConfigService configService, ICacheService cacheService) {
         this.logger = logger;
         this.transactionId = UUID.randomUUID();
         logger.debug("Transaction created: " + transactionId);
@@ -38,6 +39,7 @@ public class ServiceTransaction implements IServiceTransaction {
         this.serviceProvider = ServiceProviderBuilder.builder()
                 .addSingleton(ICacheService.class, (s) -> cacheService)
                 .addSingleton(IConfigService.class, (s) -> configService)
+                .addSingleton(IMarkerService.class, (s) -> markerService)
                 .addSingleton(IServiceTransaction.class, (s) -> this)
                 .addSingleton(Plugin.class, (s) -> plugin)
                 .addSingleton(IPluginLogger.class, (s) -> logger)

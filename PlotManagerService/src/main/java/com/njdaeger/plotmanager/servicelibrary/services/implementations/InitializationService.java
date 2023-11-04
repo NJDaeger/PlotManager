@@ -60,7 +60,12 @@ public class InitializationService implements Runnable {
         var system = await(userService.getSystemUser()).getOrThrow();
 
         Bukkit.getWorlds().forEach(w -> await(worldService.getWorldByUuid(w.getUID()).thenApply(wRes -> {
-            if (!wRes.successful()) return await(worldService.createWorld(system.getUserId(), w)).getOrThrow();
+            if (!wRes.successful()) {
+                logger.info("World " + w.getName() + " not found in database. Creating...");
+                var res = await(worldService.createWorld(system.getUserId(), w));
+                if (!res.successful()) logger.warning("Failed to create world " + w.getName() + ". Error: " + res.message());
+                return res.getOrThrow();
+            }
             else {
                 var world = wRes.getOrThrow();
                 if (!world.getWorldName().equals(w.getName())) world = await(worldService.updateWorld(system.getUserId(), w.getUID(), w.getName())).getOrThrow();

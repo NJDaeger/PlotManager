@@ -4,11 +4,13 @@ import com.njdaeger.pdk.command.CommandContext;
 import com.njdaeger.pdk.command.exception.PDKCommandException;
 import com.njdaeger.pdk.utils.text.Text;
 import com.njdaeger.plotmanager.dataaccess.Util;
+import com.njdaeger.plotmanager.plugin.IPlotManagerPlugin;
 import com.njdaeger.plotmanager.servicelibrary.models.Plot;
 import com.njdaeger.plotmanager.servicelibrary.models.User;
 import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
 import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
 import com.njdaeger.plotmanager.servicelibrary.transactional.IServiceTransaction;
+import com.njdaeger.serviceprovider.IServiceProvider;
 import org.bukkit.Bukkit;
 
 import java.util.UUID;
@@ -67,6 +69,10 @@ public class CommandContextWrapper extends CommandContext {
         var res = argAt(index);
         if (res == null) throw new PDKCommandException(message);
         return res;
+    }
+
+    public IServiceProvider getServiceProvider() {
+        return ((IPlotManagerPlugin)getPlugin()).getServiceProvider();
     }
 
     public Plot resolvePlot() throws PDKCommandException {

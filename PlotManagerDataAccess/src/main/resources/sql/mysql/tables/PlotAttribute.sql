@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS PlotAttribute
     id int NOT NULL AUTO_INCREMENT,
     plotId int NOT NULL,
     attributeId int NOT NULL,
-    value varchar(4096) NOT NULL,
+    value nvarchar(4000) NOT NULL,
     deleted bit NOT NULL DEFAULT 0,
     created bigint NOT NULL DEFAULT unix_timestamp(),
     createdBy int NOT NULL,

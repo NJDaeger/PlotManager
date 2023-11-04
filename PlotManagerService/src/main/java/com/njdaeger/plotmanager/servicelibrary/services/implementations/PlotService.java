@@ -14,6 +14,7 @@ import com.njdaeger.plotmanager.servicelibrary.models.World;
 import com.njdaeger.plotmanager.servicelibrary.services.IAttributeService;
 import com.njdaeger.plotmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.plotmanager.servicelibrary.services.IConfigService;
+import com.njdaeger.plotmanager.servicelibrary.services.IMarkerService;
 import com.njdaeger.plotmanager.servicelibrary.services.IPlotService;
 import com.njdaeger.plotmanager.servicelibrary.services.IUserService;
 import com.njdaeger.plotmanager.servicelibrary.services.IWorldService;
@@ -39,15 +40,17 @@ public class PlotService implements IPlotService {
     private final IConfigService configService;
     private final ICacheService cacheService;
     private final IAttributeService attributeService;
+    private final IMarkerService markerService;
     private final IPluginLogger logger;
 
-    public PlotService(IServiceTransaction transaction, IUserService userService, IAttributeService attributeService, IWorldService worldService, IConfigService configService, ICacheService cacheService, IPluginLogger logger) {
+    public PlotService(IServiceTransaction transaction, IUserService userService, IAttributeService attributeService, IWorldService worldService, IMarkerService markerService, IConfigService configService, ICacheService cacheService, IPluginLogger logger) {
         this.transaction = transaction;
         this.userService = userService;
         this.worldService = worldService;
         this.configService = configService;
         this.cacheService = cacheService;
         this.attributeService = attributeService;
+        this.markerService = markerService;
         this.logger = logger;
     }
 
@@ -141,9 +144,11 @@ public class PlotService implements IPlotService {
                 await(plotRepo.updatePlotParent(userId, plotEntity.getId(), plotBuilder.getParent().getId()));
             }
 
-            var createdPlot = new Plot(plotEntity.getId(), location, plotBuilder.getAttributes(), List.of(), plotBuilder.getParent(), null, false);
+            var loc = new Location(location.getWorld(), location.getBlockX(), location.getBlockY(), location.getBlockZ());
+            var createdPlot = new Plot(plotEntity.getId(), loc, plotBuilder.getAttributes(), List.of(), plotBuilder.getParent(), null, false);
             cacheService.getPlotBuilderCache().remove(creator);
             cacheService.getPlotCache().put(plotEntity.getId(), createdPlot);
+            markerService.createPlotMarker(createdPlot);
 
             return Result.good(createdPlot);
 
@@ -179,7 +184,13 @@ public class PlotService implements IPlotService {
                 }));
 
                 Plot parent = null;
-                if (plotEntity.getParent() != null) parent = await(getPlot(plotEntity.getParent())).getOr(null);
+                if (plotEntity.getParent() != null) {
+                    if (plotEntity.getParent() == plotEntity.getId()) {
+                        logger.warning("Plot " + plotEntity.getId() + " has itself as a parent. Skipping.");
+                        continue;
+                    }
+                    parent = await(getPlot(plotEntity.getParent())).getOr(null);
+                }
 
                 var users = await(plotRepo.getPlotUsersForPlot(plotEntity.getId()).thenApply(userEntities -> {
                     if (userEntities == null || userEntities.isEmpty()) return List.<PlotUser>of();
@@ -227,7 +238,13 @@ public class PlotService implements IPlotService {
             }));
 
             Plot parent = null;
-            if (plotEntity.getParent() != null) parent = await(getPlot(plotEntity.getParent())).getOr(null);
+            if (plotEntity.getParent() != null) {
+                if (plotEntity.getParent() == plotEntity.getId()) {
+                    logger.warning("Plot " + plotEntity.getId() + " has itself as a parent.");
+                    return Result.bad("Plot " + plotEntity.getId() + " has itself as a parent.");
+                }
+                parent = await(getPlot(plotEntity.getParent())).getOr(null);
+            }
 
             var users = await(plotRepo.getPlotUsersForPlot(plotEntity.getId()).thenApply(userEntities -> {
                 if (userEntities == null || userEntities.isEmpty()) return List.<PlotUser>of();
@@ -267,7 +284,9 @@ public class PlotService implements IPlotService {
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).updatePlotLocation(userId, plotId, worldId, newLocation.getBlockX(), newLocation.getBlockY(), newLocation.getBlockZ()).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update plot.");
 
+                markerService.deletePlotMarker(plot);
                 var newPlot = new Plot(plot.getId(), newLocation, plot.getAttributes(), plot.getUsers(), plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
+                markerService.createPlotMarker(newPlot);
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
                 return Result.good(newPlot);
             }));
@@ -294,10 +313,23 @@ public class PlotService implements IPlotService {
                 if (success == null) return Result.bad("Failed to update plot.");
 
                 var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), parent, plot.getPlotGroup(), plot.isDeleted());
+                if (isCyclic(newPlot)) return Result.bad("This would cause a cyclic reference.");
+                markerService.deletePlotMarker(plot);
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
+                markerService.createPlotMarker(newPlot);
                 return Result.good(newPlot);
             }));
         }).whenComplete(finishTransaction());
+    }
+
+    private boolean isCyclic(Plot initial) {
+        return cycle(initial.getParent(), initial.getId());
+    }
+
+    private boolean cycle(Plot check, int idNotingCycle) {
+        if (check.getParent() == null) return false;
+        if (check.getParent().getId() == check.getId() || check.getParent().getId() == idNotingCycle || check.getId() == idNotingCycle) return true;
+        return cycle(check.getParent(), idNotingCycle);
     }
 
     @Override
@@ -317,7 +349,9 @@ public class PlotService implements IPlotService {
                 if (success == null) return Result.bad("Failed to update plot.");
 
                 var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), null, plot.getPlotGroup(), plot.isDeleted());
+                markerService.deletePlotMarker(plot);
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
+                markerService.createPlotMarker(newPlot);
                 return Result.good(newPlot);
             }));
         }).whenComplete(finishTransaction());
@@ -343,7 +377,9 @@ public class PlotService implements IPlotService {
                 if (success == null) return Result.bad("Failed to update plot.");
 
                 var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), group, plot.isDeleted());
+                markerService.deletePlotMarker(plot);
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
+                markerService.createPlotMarker(newPlot);
                 return Result.good(newPlot);
             }));
         }).whenComplete(finishTransaction());
@@ -366,7 +402,9 @@ public class PlotService implements IPlotService {
                 if (success == null) return Result.bad("Failed to update plot.");
 
                 var newPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), null, plot.isDeleted());
+                markerService.deletePlotMarker(plot);
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
+                markerService.createPlotMarker(newPlot);
                 return Result.good(newPlot);
             }));
         }).whenComplete(finishTransaction());
@@ -402,8 +440,10 @@ public class PlotService implements IPlotService {
                 var newAttributes = new ArrayList<>(plot.getAttributes());
                 newAttributes.removeIf(attr -> attr.getAttribute().equalsIgnoreCase(attributeName));
                 newAttributes.add(new PlotAttribute(attributeName, value));
+                markerService.deletePlotMarker(plot);
                 var newPlot = new Plot(plot.getId(), plot.getLocation(), newAttributes, plot.getUsers(), plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
+                markerService.createPlotMarker(newPlot);
                 return Result.good(newPlot);
             }));
         }).whenComplete(finishTransaction());
@@ -432,8 +472,10 @@ public class PlotService implements IPlotService {
                 var res = newAttributes.removeIf(attr -> attr.getAttribute().equalsIgnoreCase(attributeName));
                 if (!res) return Result.bad("Failed to remove attribute " + attributeName + " from plot. Did not find attribute in plot attribute list.");
 
+                markerService.deletePlotMarker(plot);
                 var newPlot = new Plot(plot.getId(), plot.getLocation(), newAttributes, plot.getUsers(), plot.getParent(), plot.getPlotGroup(), plot.isDeleted());
                 cacheService.getPlotCache().put(plot.getId(), newPlot);
+                markerService.createPlotMarker(newPlot);
                 return Result.good(newPlot);
             }));
         }).whenComplete(finishTransaction());
@@ -543,8 +585,10 @@ public class PlotService implements IPlotService {
             return await(transaction.getUnitOfWork().repo(IPlotRepository.class).deletePlot(deletedUser.getId(), plotId).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to delete plot.");
 
-                cacheService.getPlotCache().put(plotId, new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), plot.getPlotGroup(), true));
-                return Result.good(plot);
+                var deletedPlot = new Plot(plot.getId(), plot.getLocation(), plot.getAttributes(), plot.getUsers(), plot.getParent(), plot.getPlotGroup(), true);
+                cacheService.getPlotCache().put(plotId, deletedPlot);
+                markerService.deletePlotMarker(deletedPlot);
+                return Result.good(deletedPlot);
             }));
         }).whenComplete(finishTransaction());
 

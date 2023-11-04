@@ -153,10 +153,9 @@ public class PlotRepository implements IPlotRepository {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var proc = procedures.deletePlotUser(deletedBy, plotId, userId);
-                var existing = await(getPlotUser(plotId, userId));
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
                 if (id == ExecutionConstants.NO_ROWS_AFFECTED) return null;
-                return existing;
+                return await(getPlotUser(plotId, userId));
             } catch (Exception e) {
                 logger.exception(e);
                 return null;

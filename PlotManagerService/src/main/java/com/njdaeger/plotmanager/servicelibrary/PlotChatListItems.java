@@ -29,7 +29,7 @@ public class PlotChatListItems {
     public static List<PlotChatListItem> getListItemsForPlot(List<String> requiredAttributes, IAttributeService attributeService, IConfigService configService, Plot plot, boolean readonly) {
         var listItems = new ArrayList<PlotChatListItem>();
         listItems.add(getLocationLine(plot.getLocation()));
-        listItems.add(getPlotGroupLine(plot.getPlotGroup(), readonly, false));
+        //listItems.add(getPlotGroupLine(plot.getPlotGroup(), readonly, false));
         listItems.add(getParentLine(plot.getParent(), readonly, false));
         listItems.addAll(getPlotAttributeLines(attributeService, configService, requiredAttributes, plot.getAttributes(), readonly, false, plot.getId()));
         return listItems;
@@ -38,12 +38,12 @@ public class PlotChatListItems {
     public static List<PlotChatListItem> getListItemsForBuilder(List<String> requiredAttributes, IAttributeService attributeService, IConfigService configService, PlotBuilder builder) {
         var listItems = new ArrayList<PlotChatListItem>();
         listItems.add(getLocationLine(builder.getLocation()));
-        listItems.add(getPlotGroupLine(builder.getPlotGroup(), false, true));
+        //listItems.add(getPlotGroupLine(builder.getPlotGroup(), false, true));
         listItems.add(getParentLine(builder.getParent(), false, true));
         listItems.addAll(getPlotAttributeLines(attributeService, configService, requiredAttributes, builder.getAttributes(), false, true, -1));
         var addAdditionalValue = Text.of("[Add Additional Attributes...]").setUnderlined(true).setItalic(true).setColor(ColorUtils.ACTION_TEXT)
                 .setHoverEvent(HoverAction.SHOW_TEXT, Text.of("Click to add additional attributes.").setColor(ColorUtils.REGULAR_TEXT))
-                .setClickEvent(ClickAction.SUGGEST_COMMAND, ClickString.of("/plot edit -session attribute " ));
+                .setClickEvent(ClickAction.RUN_COMMAND, ClickString.of("/plot edit -session attribute " ));
         listItems.add(new PlotChatListItem("", addAdditionalValue, false));
 
         return listItems;
