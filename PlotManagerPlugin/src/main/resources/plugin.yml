@@ -1,6 +1,0 @@
-main: com.njdaeger.plotmanager.plugin.PlotManager
-name: PlotManager
-version: ${project.version}
-author: NJDaeger
-description: A plugin to manage plots.
-api-version: 1.20

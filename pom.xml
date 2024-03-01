@@ -5,15 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.njdaeger</groupId>
-    <artifactId>PlotManager</artifactId>
+    <artifactId>TaskManager</artifactId>
     <packaging>pom</packaging>
     <version>0.0.1</version>
     <modules>
-        <module>PlotManagerService</module>
-        <module>PlotManagerDataAccess</module>
-        <module>PlotManagerWeb</module>
-        <module>PlotManagerPlugin</module>
-        <module>PlotManagerJar</module>
+        <module>TaskManagerService</module>
+        <module>TaskManagerDataAccess</module>
+        <module>TaskManagerWeb</module>
+        <module>TaskManagerPlugin</module>
+        <module>TaskManagerJar</module>
     </modules>
 
     <properties>
@@ -31,6 +31,19 @@
                     <source>17</source>
                     <target>17</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <!-- JUnit 5 requires Surefire version 2.22.0 or higher -->
+                <version>3.2.5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>junit-jupiter-engine</artifactId>
+                        <version>5.9.1</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
