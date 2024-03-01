@@ -202,26 +202,4 @@ public class MySqlDatabase implements IDatabase<MySqlTransaction, Connection> {
             return -1;
         }
     }
-
-    private void loadTable(MySqlTransaction transaction, String tableFile) {
-        try {
-            var table = Util.getJarResource("sql/mysql/tables/" + tableFile);
-            var tableQuery = new String(table.readAllBytes(), StandardCharsets.UTF_8);
-            transaction.execute(tableQuery);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load file " + tableFile + " - " + e.getMessage(), e);
-        }
-    }
-
-    private void loadTrigger(MySqlTransaction transaction, String triggerFile) {
-        try {
-            var trigger = Util.getJarResource("sql/mysql/triggers/" + triggerFile);
-            var triggerQuery = new String(trigger.readAllBytes(), StandardCharsets.UTF_8);
-            transaction.execute(triggerQuery);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load file " + triggerFile + " - " + e.getMessage(), e);
-        }
-    }
-
-
 }
