@@ -5,10 +5,12 @@ import com.njdaeger.taskmanager.dataaccess.repositories.IAttributeRepository;
 import com.njdaeger.taskmanager.servicelibrary.Result;
 import com.njdaeger.taskmanager.servicelibrary.events.attributes.AttributeCreateEvent;
 import com.njdaeger.taskmanager.servicelibrary.models.Attribute;
+import com.njdaeger.taskmanager.servicelibrary.models.TaskType;
 import com.njdaeger.taskmanager.servicelibrary.models.User;
 import com.njdaeger.taskmanager.servicelibrary.services.IAttributeService;
 import com.njdaeger.taskmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.taskmanager.servicelibrary.services.IConfigService;
+import com.njdaeger.taskmanager.servicelibrary.services.ITaskTypeService;
 import com.njdaeger.taskmanager.servicelibrary.services.IUserService;
 import com.njdaeger.taskmanager.servicelibrary.transactional.IServiceTransaction;
 import com.njdaeger.pluginlogger.IPluginLogger;
@@ -25,15 +27,17 @@ public class AttributeService implements IAttributeService {
 
     private final IServiceTransaction transaction;
     private final IUserService userService;
+    private final ITaskTypeService taskTypeService;
     private final IConfigService configService;
     private final ICacheService cacheService;
     private final IPluginLogger logger;
 
-    public AttributeService(IServiceTransaction transaction, IUserService userService, IConfigService configService, ICacheService cacheService, IPluginLogger logger) {
+    public AttributeService(IServiceTransaction transaction, IUserService userService, ITaskTypeService taskTypeService, IConfigService configService, ICacheService cacheService, IPluginLogger logger) {
         this.transaction = transaction;
         this.userService = userService;
         this.configService = configService;
         this.cacheService = cacheService;
+        this.taskTypeService = taskTypeService;
         this.logger = logger;
     }
 
@@ -45,25 +49,27 @@ public class AttributeService implements IAttributeService {
             if (!cacheService.getAttributeCache().isEmpty()) return Result.good(List.copyOf(cacheService.getAttributeCache().values()));
 
             return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributes().thenApply(attributes -> {
-                attributes.forEach(attribute -> cacheService.getAttributeCache().put(attribute.getName(), new Attribute(attribute.getId(), attribute.getName())));
+                attributes.forEach(attribute -> cacheService.getAttributeCache().put(attribute.getId(), new Attribute(attribute.getId(), await(taskTypeService.getTaskType(attribute.getTaskTypeId())).getOrThrow(), attribute.getName())));
                 return Result.good(List.copyOf(cacheService.getAttributeCache().values()));
             }));
         }).whenComplete(finishTransaction());
     }
 
     @Override
-    public CompletableFuture<Result<Attribute>> getAttribute(String name) {
+    public CompletableFuture<Result<Attribute>> getAttribute(String name, TaskType taskType) {
         transaction.use();
 
         return Util.<Result<Attribute>>async(() -> {
             if (name == null || name.isBlank()) return Result.bad("Attribute name cannot be null or blank.");
 
-            if (cacheService.getAttributeCache().containsKey(name)) return Result.good(cacheService.getAttributeCache().get(name));
+            var found = cacheService.getAttributeCache().values().stream().filter(attr -> attr.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
+            if (found != null) return Result.good(found);
 
-            return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributeByName(name).thenApply(attribute -> {
+            return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributeByName(name, taskType.getTaskTypeId()).thenApply(attribute -> {
                 if (attribute == null) return Result.bad("Failed to find attribute with name " + name + ".");
-                cacheService.getAttributeCache().put(name, new Attribute(attribute.getId(), attribute.getName()));
-                return Result.good(cacheService.getAttributeCache().get(name));
+                var attr = new Attribute(attribute.getId(), taskType, attribute.getName());
+                cacheService.getAttributeCache().put(attribute.getId(), attr);
+                return Result.good(attr);
             }));
         }).whenComplete(finishTransaction());
     }
@@ -75,69 +81,66 @@ public class AttributeService implements IAttributeService {
         return Util.<Result<Attribute>>async(() -> {
             if (id < 0) return Result.bad("Attribute id cannot be less than 0.");
 
-            var attribute = cacheService.getAttributeCache().values().stream().filter(attr -> attr.getId() == id).findFirst().orElse(null);
-            if (attribute != null) return Result.good(attribute);
+            if (cacheService.getAttributeCache().containsKey(id)) return Result.good(cacheService.getAttributeCache().get(id));
 
             return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributeById(id).thenApply(attr -> {
                 if (attr == null) return Result.bad("Failed to find attribute with id " + id + ".");
-                cacheService.getAttributeCache().put(attr.getName(), new Attribute(attr.getId(), attr.getName()));
-                return Result.good(cacheService.getAttributeCache().get(attr.getName()));
-            }));
-        }).whenComplete(finishTransaction());
-    }
-
-    @Override
-    public CompletableFuture<Result<Attribute>> createAttribute(UUID createdBy, String name) {
-        transaction.use();
-
-        return Util.<Result<Attribute>>async(() -> {
-            var createEvent = new AttributeCreateEvent(createdBy, name);
-            Bukkit.getPluginManager().callEvent(createEvent);
-
-            if (createEvent.isCancelled()) return Result.bad("Attribute creation was cancelled.");
-            var eName = createEvent.getAttributeName();
-            var eType = createEvent.getAttributeType();
-
-            if (createdBy == null) return Result.bad("Creator cannot be null.");
-
-            if (eName == null || eName.isBlank()) return Result.bad("Attribute name cannot be null or blank.");
-            if (eType == null || eType.isBlank()) return Result.bad("Attribute type cannot be null or blank.");
-            if (cacheService.getAttributeCache().containsKey(eName)) return Result.bad("An attribute with that name already exists.");
-
-//            var attributeType = configService.getAttributeType(eType);
-//            if (attributeType == null) return Result.bad("An attribute type with that name does not exist.");
-
-            var userId = await(userService.getUserByUuid(createdBy)).getOr(User::getId, -1);
-            if (userId == -1) return Result.bad("Failed to find user with uuid " + createdBy + ".");
-
-            return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).insertAttribute(userId, eName).thenApply(success -> {
-                if (success == null) return Result.bad("Failed to insert attribute.");
-                var attribute = new Attribute(success.getId(), eName);
-                cacheService.getAttributeCache().put(eName, attribute);
+                var taskTypeObj = await(taskTypeService.getTaskType(attr.getTaskTypeId())).getOrThrow();
+                var attribute = new Attribute(attr.getId(), taskTypeObj, attr.getName());
+                cacheService.getAttributeCache().put(attr.getId(), attribute);
                 return Result.good(attribute);
             }));
         }).whenComplete(finishTransaction());
     }
 
     @Override
-    public CompletableFuture<Result<Attribute>> updateAttributeName(UUID modifiedBy, String oldName, String newName) {
+    public CompletableFuture<Result<Attribute>> createAttribute(UUID createdBy, TaskType taskType, String name) {
+        transaction.use();
+
+        return Util.<Result<Attribute>>async(() -> {
+
+            if (createdBy == null) return Result.bad("Creator cannot be null.");
+
+            if (name == null || name.isBlank()) return Result.bad("Attribute name cannot be null or blank.");
+
+            var found = cacheService.getAttributeCache().values().stream().filter(attr -> attr.getName().equalsIgnoreCase(name)).findFirst().orElse(null);
+            if (found != null) return Result.bad("An attribute with that name already exists.");
+            var userId = await(userService.getUserByUuid(createdBy)).getOr(User::getId, -1);
+            if (userId == -1) return Result.bad("Failed to find user with uuid " + createdBy + ".");
+
+            return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).insertAttribute(userId, taskType.getTaskTypeId(), name).thenApply(success -> {
+                if (success == null) return Result.bad("Failed to insert attribute.");
+                var taskTypeObj = await(taskTypeService.getTaskType(success.getTaskTypeId())).getOrThrow();
+                var attribute = new Attribute(success.getId(), taskTypeObj, name);
+                cacheService.getAttributeCache().put(success.getId(), attribute);
+                return Result.good(attribute);
+            }));
+        }).whenComplete(finishTransaction());
+    }
+
+    @Override
+    public CompletableFuture<Result<Attribute>> updateAttribute(UUID modifiedBy, String attributeBeingUpdated, TaskType taskType, String newName) {
         transaction.use();
 
         return Util.<Result<Attribute>>async(() -> {
             if (modifiedBy == null) return Result.bad("Modifier cannot be null.");
-            if (oldName == null || oldName.isBlank()) return Result.bad("Old attribute name cannot be null or blank.");
+            if (attributeBeingUpdated == null || attributeBeingUpdated.isBlank()) return Result.bad("Old attribute name cannot be null or blank.");
             if (newName == null || newName.isBlank()) return Result.bad("New attribute name cannot be null or blank.");
-            if (cacheService.getAttributeCache().containsKey(newName)) return Result.bad("An attribute with that name already exists.");
-            if (!cacheService.getAttributeCache().containsKey(oldName)) return Result.bad("An attribute with that name does not exist.");
+            if (cacheService.getAttributeCache().values().stream().anyMatch(attr -> attr.getName().equalsIgnoreCase(newName))) return Result.bad("An attribute with that name already exists.");
+            var found = cacheService.getAttributeCache().values().stream().filter(attr -> attr.getName().equalsIgnoreCase(attributeBeingUpdated)).findFirst().orElse(null);
+            if (found == null) return Result.bad("Failed to find attribute with name " + attributeBeingUpdated + ".");
 
             var userId = await(userService.getUserByUuid(modifiedBy)).getOr(User::getId, -1);
             if (userId == -1) return Result.bad("Failed to find user with uuid " + modifiedBy + ".");
 
-            return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).updateAttribute(userId, cacheService.getAttributeCache().get(oldName).getId(), newName).thenApply(success -> {
+            var taskTypeId = taskType == null ? null : taskType.getTaskTypeId();
+
+            return await(transaction.getUnitOfWork().repo(IAttributeRepository.class).updateAttribute(userId, found.getId(), taskTypeId, newName).thenApply(success -> {
                 if (success == null) return Result.bad("Failed to update attribute.");
-                var attribute = new Attribute(success.getId(), newName);
-                cacheService.getAttributeCache().remove(oldName);
-                cacheService.getAttributeCache().put(newName, attribute);
+                var taskTypeObj = await(taskTypeService.getTaskType(success.getTaskTypeId())).getOrThrow();
+                var attribute = new Attribute(success.getId(), taskTypeObj, newName);
+                cacheService.getAttributeCache().remove(found.getId());
+                cacheService.getAttributeCache().put(success.getId(), attribute);
                 return Result.good(attribute);
             }));
         }).whenComplete(finishTransaction());
@@ -161,7 +164,7 @@ public class AttributeService implements IAttributeService {
         transaction.use();
 
         return transaction.getUnitOfWork().repo(IAttributeRepository.class).getAttributes().thenApply(attributes -> {
-            attributes.forEach(attribute -> cacheService.getAttributeCache().put(attribute.getName(), new Attribute(attribute.getId(), attribute.getName())));
+            attributes.forEach(attribute -> cacheService.getAttributeCache().put(attribute.getId(), new Attribute(attribute.getId(), await(taskTypeService.getTaskType(attribute.getTaskTypeId())).getOrThrow(), attribute.getName())));
             return Result.good(List.copyOf(cacheService.getAttributeCache().values()));
         }).whenComplete(finishTransaction()).thenAccept((r) -> {});
     }

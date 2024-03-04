@@ -21,13 +21,15 @@ public interface IProcedure {
 
     Pair<String, Map<String, Object>> selectAttributes();
 
-    Pair<String, Map<String, Object>> selectAttributeByName(String attributeName);
+    Pair<String, Map<String, Object>> selectAttributesByTaskType(int taskTypeId);
+
+    Pair<String, Map<String, Object>> selectAttributeByName(String attributeName, int taskTypeId);
 
     Pair<String, Map<String, Object>> selectAttributeById(int attributeId);
 
-    Pair<String, Map<String, Object>> insertAttribute(int createdBy, String name);
+    Pair<String, Map<String, Object>> insertAttribute(int createdBy, int taskTypeId, String name);
 
-    Pair<String, Map<String, Object>> updateAttribute(int modifiedBy, int attributeId, String name);
+    Pair<String, Map<String, Object>> updateAttribute(int modifiedBy, int attributeId, Integer taskTypeId, String name);
 
     //endregion
 

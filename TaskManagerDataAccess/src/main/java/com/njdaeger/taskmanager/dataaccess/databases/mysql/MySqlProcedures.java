@@ -34,7 +34,12 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
-    public Pair<String, Map<String, Object>> selectAttributeByName(String attributeName) {
+    public Pair<String, Map<String, Object>> selectAttributesByTaskType(int taskTypeId) {
+        return Pair.of("call TaskManager.Select_AttributesByTaskType(?)", Map.of("1", taskTypeId));
+    }
+
+    @Override
+    public Pair<String, Map<String, Object>> selectAttributeByName(String attributeName, int taskTypeId) {
         return Pair.of("call TaskManager.Select_AttributeByName(?)", Map.of("1", attributeName));
     }
 
@@ -44,7 +49,7 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
-    public Pair<String, Map<String, Object>> insertAttribute(int createdBy, String name) {
+    public Pair<String, Map<String, Object>> insertAttribute(int createdBy, int taskTypeId, String name) {
         return Pair.of("call TaskManager.Insert_Attribute(?, ?)", Map.of(
                 "1", createdBy,
                 "2", name
@@ -52,11 +57,12 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
-    public Pair<String, Map<String, Object>> updateAttribute(int modifiedBy, int attributeId, String name) {
+    public Pair<String, Map<String, Object>> updateAttribute(int modifiedBy, int attributeId, Integer taskTypeId, String name) {
         return Pair.of("call TaskManager.Update_Attribute(?, ?, ?)", Map.of(
                 "1", modifiedBy,
                 "2", attributeId,
-                "3", name
+                "3", taskTypeId,
+                "4", name
         ));
     }
 

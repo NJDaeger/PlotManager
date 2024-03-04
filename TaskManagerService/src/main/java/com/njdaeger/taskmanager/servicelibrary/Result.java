@@ -87,6 +87,17 @@ public class Result<T> {
     }
 
     /**
+     * Get the result or throw an exception.
+     * @param message The message of the exception.
+     * @return The result.
+     * @throws Exception The exception.
+     */
+    public T getOrThrow(String message) throws Exception {
+        if (successful) return result;
+        throw new RuntimeException(message);
+    }
+
+    /**
      * Check if this result was successful.
      * @return True if this result was successful, false otherwise.
      */

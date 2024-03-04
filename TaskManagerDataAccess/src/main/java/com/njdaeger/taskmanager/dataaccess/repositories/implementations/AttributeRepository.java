@@ -42,10 +42,23 @@ public class AttributeRepository implements IAttributeRepository {
     }
 
     @Override
-    public CompletableFuture<AttributeEntity> getAttributeByName(String name) {
+    public CompletableFuture<List<AttributeEntity>> getAttributesByTaskType(int taskTypeId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.selectAttributeByName(name);
+                var proc = procedures.selectAttributesByTaskType(taskTypeId);
+                return transaction.query(proc.getFirst(), proc.getSecond(), AttributeEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return List.of();
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<AttributeEntity> getAttributeByName(String name, int taskTypeId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectAttributeByName(name, taskTypeId);
                 return transaction.queryScalar(proc.getFirst(), proc.getSecond(), AttributeEntity.class);
             } catch (Exception e) {
                 logger.exception(e);
@@ -68,10 +81,10 @@ public class AttributeRepository implements IAttributeRepository {
     }
 
     @Override
-    public CompletableFuture<AttributeEntity> insertAttribute(int createdBy, String name) {
+    public CompletableFuture<AttributeEntity> insertAttribute(int createdBy, int taskTypeId, String name) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.insertAttribute(createdBy, name);
+                var proc = procedures.insertAttribute(createdBy, taskTypeId, name);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
                 if (id == -1) return null;
                 return Util.await(getAttributeById(id));
@@ -83,10 +96,10 @@ public class AttributeRepository implements IAttributeRepository {
     }
 
     @Override
-    public CompletableFuture<AttributeEntity> updateAttribute(int modifiedBy, int attributeId, String name) {
+    public CompletableFuture<AttributeEntity> updateAttribute(int modifiedBy, int attributeId, Integer taskTypeId, String name) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var proc = procedures.updateAttribute(modifiedBy, attributeId, name);
+                var proc = procedures.updateAttribute(modifiedBy, attributeId, taskTypeId, name);
                 var id = transaction.execute(proc.getFirst(), proc.getSecond());
                 if (id == -1) return null;
                 return Util.await(getAttributeById(attributeId));

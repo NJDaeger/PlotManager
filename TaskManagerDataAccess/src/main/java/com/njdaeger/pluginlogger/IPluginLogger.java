@@ -18,6 +18,14 @@ public interface IPluginLogger extends Closeable {
     void exception(Exception exception);
 
     /**
+     * Log an exception. Will be saved to the error file if enabled.
+     * @param message The message to log.
+     */
+    default void exception(String message) {
+        exception(new Exception(message));
+    }
+
+    /**
      * Log a warning message.
      * @param message The message to log.
      * @param additionalInfo Additional information to log with the message.

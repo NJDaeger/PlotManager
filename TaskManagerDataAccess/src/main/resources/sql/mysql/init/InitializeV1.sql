@@ -64,12 +64,14 @@ CREATE TABLE IF NOT EXISTS TaskManager.Attribute
 (
     id int NOT NULL AUTO_INCREMENT,
     name varchar(255) NOT NULL,
+    taskTypeId int NOT NULL,
     created bigint NOT NULL DEFAULT unix_timestamp(),
     createdBy int NOT NULL,
     modified bigint NULL,
     modifiedBy int NULL,
     CONSTRAINT Attribute_pk PRIMARY KEY (id),
-    CONSTRAINT Attribute_name_uq UNIQUE (name),
+    CONSTRAINT Attribute_name_uq UNIQUE (name, taskTypeId),
+    CONSTRAINT Attribute_taskTypeId_fk FOREIGN KEY (taskTypeId) REFERENCES TaskManager.TaskType (id),
     CONSTRAINT Attribute_createdBy_fk FOREIGN KEY (createdBy) REFERENCES TaskManager.User (id),
     CONSTRAINT Attribute_modifiedBy_fk FOREIGN KEY (modifiedBy) REFERENCES TaskManager.User (id)
 )//
@@ -188,12 +190,20 @@ BEGIN
     FROM TaskManager.Attribute;
 END//
 
--- select attribute by name
-CREATE OR REPLACE PROCEDURE TaskManager.Select_AttributeByName(IN _name VARCHAR(255))
+-- select attributes by task type
+CREATE OR REPLACE PROCEDURE TaskManager.Select_AttributesByTaskType(IN _taskTypeId INT)
 BEGIN
     SELECT *
     FROM TaskManager.Attribute
-    WHERE TaskManager.Attribute.name = _name;
+    WHERE TaskManager.Attribute.taskTypeId = _taskTypeId;
+END//
+
+-- select attribute by name
+CREATE OR REPLACE PROCEDURE TaskManager.Select_AttributeByName(IN _name VARCHAR(255), IN _taskTypeId INT)
+BEGIN
+    SELECT *
+    FROM TaskManager.Attribute
+    WHERE TaskManager.Attribute.name = _name AND TaskManager.Attribute.taskTypeId = _taskTypeId;
 END//
 
 -- select attribute by id
@@ -205,19 +215,20 @@ BEGIN
 END//
 
 -- insert attribute
-CREATE OR REPLACE PROCEDURE TaskManager.Insert_Attribute(IN _createdBy INT, IN _name VARCHAR(255))
+CREATE OR REPLACE PROCEDURE TaskManager.Insert_Attribute(IN _createdBy INT, IN _taskTypeId INT, IN _name VARCHAR(255))
 BEGIN
-    INSERT INTO TaskManager.Attribute (createdBy, name)
-    VALUES (_createdBy, _name);
+    INSERT INTO TaskManager.Attribute (createdBy, name, taskTypeId)
+    VALUES (_createdBy, _name, _taskTypeId);
 END//
 
 -- update attribute
-CREATE OR REPLACE PROCEDURE TaskManager.Update_Attribute(IN _modifiedBy INT, IN _attributeId INT, IN _name VARCHAR(255))
+CREATE OR REPLACE PROCEDURE TaskManager.Update_Attribute(IN _modifiedBy INT, IN _attributeId INT, IN _taskTypeId INT, IN _name VARCHAR(255))
 BEGIN
     UPDATE TaskManager.Attribute
     SET
         modifiedBy = _modifiedBy,
-        name = COALESCE(_name, name)
+        name = COALESCE(_name, name),
+        taskTypeId = COALESCE(_taskTypeId, taskTypeId)
     WHERE TaskManager.Attribute.id = _attributeId;
 END//
 

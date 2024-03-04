@@ -14,14 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class CacheService implements ICacheService {
 
-    private final Map<String, Attribute> attributeCache = new ConcurrentHashMap<>();
+    private final Map<Integer, Attribute> attributeCache = new ConcurrentHashMap<>();
     private final Map<UUID, User> userCache = new ConcurrentHashMap<>();
     private final Map<String, TaskType> taskTypeCache = new ConcurrentHashMap<>();
     private final Map<Integer, Task> taskCache = new ConcurrentHashMap<>();
     private final Map<String, Project> projectCache = new ConcurrentHashMap<>();
 
     @Override
-    public Map<String, Attribute> getAttributeCache() {
+    public Map<Integer, Attribute> getAttributeCache() {
         return attributeCache;
     }
 

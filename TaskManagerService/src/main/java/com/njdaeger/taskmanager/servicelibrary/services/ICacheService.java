@@ -12,10 +12,10 @@ import java.util.UUID;
 public interface ICacheService {
 
     /**
-     * Attribute name mapped to its attribute object
+     * Attribute id mapped to its attribute object
      * @return The attribute cache
      */
-    Map<String, Attribute> getAttributeCache();
+    Map<Integer, Attribute> getAttributeCache();
 
     /**
      * User UUID mapped to their user object

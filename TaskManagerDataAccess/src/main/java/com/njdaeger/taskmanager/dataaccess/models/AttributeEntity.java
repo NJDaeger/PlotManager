@@ -9,6 +9,9 @@ public class AttributeEntity implements Identifiable {
     @Column
     private String name;
 
+    @Column
+    private int taskTypeId;
+
     //auditing fields
     @Column
     private int createdBy;
@@ -33,6 +36,10 @@ public class AttributeEntity implements Identifiable {
 
     public String getName() {
         return name;
+    }
+
+    public int getTaskTypeId() {
+        return taskTypeId;
     }
 
     public long getCreated() {
