@@ -43,4 +43,19 @@ public class Task {
     public List<TaskAttribute> getAttributes() {
         return attributes;
     }
+
+    public boolean hasAttribute(String name) {
+        return attributes.stream().anyMatch(attr -> attr.getAttribute().getName().equalsIgnoreCase(name));
+    }
+
+    public TaskAttribute getAttribute(String name) {
+        return attributes.stream().filter(attr -> attr.getAttribute().getName().equalsIgnoreCase(name)).findFirst().orElse(null);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (!(obj instanceof Task other)) return false;
+        return other.taskId == taskId;
+    }
 }

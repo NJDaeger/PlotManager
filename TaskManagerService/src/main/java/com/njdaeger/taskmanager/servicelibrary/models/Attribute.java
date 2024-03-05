@@ -25,4 +25,10 @@ public class Attribute {
         return taskType;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (!(obj instanceof Attribute other)) return false;
+        return other.id == id;
+    }
 }

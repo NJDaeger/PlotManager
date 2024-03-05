@@ -17,4 +17,10 @@ public class RedblockConstants {
     public static final String LOCATION_ATTRIBUTE = "Location";
     public static final String MINIMUM_RANK = "MinRank";
 
+
+    public static final String REDBLOCK_STATUS_INCOMPLETE = "Incomplete";
+    public static final String REDBLOCK_STATUS_PENDING = "Pending";
+    public static final String REDBLOCK_STATUS_APPROVED = "Approved";
+    public static final String REDBLOCK_STATUS_DELETED = "Deleted";
+
 }

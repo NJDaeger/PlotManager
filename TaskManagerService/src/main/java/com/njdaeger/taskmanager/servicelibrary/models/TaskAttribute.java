@@ -24,4 +24,10 @@ public class TaskAttribute {
         return value;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (!(obj instanceof TaskAttribute other)) return false;
+        return other.taskAttributeId == taskAttributeId;
+    }
 }

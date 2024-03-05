@@ -124,6 +124,25 @@ public class TaskService implements ITaskService {
     }
 
     @Override
+    public CompletableFuture<Result<Task>> getTaskByTaskKey(Project project, TaskType taskType, int taskKey) {
+        transaction.use();
+
+        return Util.async(() -> {
+            var cached = cacheService.getTaskCache().values().stream().filter(task -> task.getProject().equals(project) && task.getTaskType().equals(taskType) && task.getTaskKey() == taskKey).findFirst();
+            return cached.map(Result::good).orElseGet(() -> await(transaction.getUnitOfWork().repo(ITaskRepository.class).getTaskByTaskKey(project.getProjectId(), taskType.getTaskTypeId(), taskKey).thenApply(task -> {
+                if (task == null)
+                    return Result.bad("No task found with key " + taskKey + " for project " + project.getProjectName() + " and task type " + taskType.getTaskTypeName());
+                var taskAttributes = await(getTaskAttributes(task.getId())).getOrThrow();
+                var parentTask = task.getParentId() == 0 ? null : await(getTaskById(task.getParentId())).getOrThrow();
+
+                cacheService.getTaskCache().put(task.getId(), new Task(task.getId(), taskType, parentTask, project, task.getTaskKey(), taskAttributes));
+                return Result.good(cacheService.getTaskCache().get(task.getId()));
+            })));
+
+        }).whenComplete(finishTransaction());
+    }
+
+    @Override
     public CompletableFuture<Result<List<Task>>> getTasksOfProject(Project project) {
         transaction.use();
 
@@ -423,4 +442,30 @@ public class TaskService implements ITaskService {
             return Result.good(updatedTask);
         }).whenComplete(finishTransaction());
     }
+
+    @Override
+    public CompletableFuture<Result<Task>> updateTaskAttribute(UUID updatedBy, int taskId, int taskAttributeId, String newValue) {
+        transaction.use();
+
+        return Util.<Result<Task>>async(() -> {
+            var task = cacheService.getTaskCache().get(taskId);
+            if (task == null) return Result.bad("No task found with id " + taskId);
+
+            var userId = await(userService.getUserByUuid(updatedBy)).getOr(User::getId, -1);
+            if (userId == -1) return Result.bad("No user found with uuid " + updatedBy);
+
+            var taskRepo = transaction.getUnitOfWork().repo(ITaskRepository.class);
+
+            var currentTaskAttributes = await(getTaskAttributes(taskId)).getOr(ArrayList::new, new ArrayList<TaskAttribute>());
+
+            var attr = await(taskRepo.updateTaskAttribute(userId, taskAttributeId, newValue));
+            if (attr == null) return Result.bad("Failed to update task attribute.");
+            currentTaskAttributes.removeIf(a -> a.getTaskAttributeId() == taskAttributeId);
+            currentTaskAttributes.add(new TaskAttribute(attr.getId(), await(attributeService.getAttributeById(attr.getAttributeId())).getOrThrow(), newValue));
+
+            var updatedTask = new Task(taskId, task.getTaskType(), task.getParent(), task.getProject(), task.getTaskKey(), currentTaskAttributes);
+            return Result.good(updatedTask);
+        }).whenComplete(finishTransaction());
+    }
+
 }

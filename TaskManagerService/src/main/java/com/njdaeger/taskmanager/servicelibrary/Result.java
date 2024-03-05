@@ -55,6 +55,16 @@ public class Result<T> {
     }
 
     /**
+     * Map the result to another result.
+     * @param map The function to map the result to.
+     * @param <R> The type of the result.
+     * @return The mapped result.
+     */
+    public <R> Result<R> tryMap(Function<T, R> map) {
+        return successful ? Result.good(map.apply(result)) : Result.bad(message);
+    }
+
+    /**
      * Get the result or a default value.
      * @param map The function to map the result to.
      * @param other The default value.
@@ -90,9 +100,8 @@ public class Result<T> {
      * Get the result or throw an exception.
      * @param message The message of the exception.
      * @return The result.
-     * @throws Exception The exception.
      */
-    public T getOrThrow(String message) throws Exception {
+    public T getOrThrow(String message) {
         if (successful) return result;
         throw new RuntimeException(message);
     }

@@ -1,5 +1,7 @@
 package com.njdaeger.taskmanager.plugin;
 
+import com.njdaeger.taskmanager.plugin.commands.ProjectCommands;
+import com.njdaeger.taskmanager.plugin.redblock.RedblockService;
 import com.njdaeger.taskmanager.servicelibrary.services.ICacheService;
 import com.njdaeger.taskmanager.servicelibrary.services.IMarkerService;
 import com.njdaeger.taskmanager.servicelibrary.services.implementations.CacheService;
@@ -66,7 +68,7 @@ public class TaskManager extends JavaPlugin implements ITaskManagerPlugin {
                     ==================== NOTICE ====================
                     Failed to initialize database. Additional plugin features will not be enabled until this is resolved.
                     
-                    Please check your database configuration in PlotManager/config.yml and try again once it is corrected.
+                    Please check your database configuration in TaskManager/config.yml and try again once it is corrected.
                     ==================== NOTICE ====================
                     ================================================
                     
@@ -77,6 +79,9 @@ public class TaskManager extends JavaPlugin implements ITaskManagerPlugin {
         serviceProvider.initialize(InitializationService.class).run();
         serviceProvider.initialize(ConfigValidationService.class).run();
         serviceProvider.initialize(TaskManagerListener.class);
+        serviceProvider.initialize(ProjectCommands.class);
+
+        serviceProvider.initialize(RedblockService.class);
     }
 
     @Override

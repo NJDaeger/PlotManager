@@ -314,6 +314,14 @@ BEGIN
     FROM TaskManager.TaskType;
 END//
 
+-- select task by project, tasktype, and key
+CREATE OR REPLACE PROCEDURE TaskManager.Select_TaskByProjectTypeAndKey(IN _projectId INT, IN _taskTypeId INT, IN _taskKey INT)
+BEGIN
+    SELECT *
+    FROM TaskManager.Task
+    WHERE TaskManager.Task.projectId = _projectId AND TaskManager.Task.typeId = _taskTypeId AND TaskManager.Task.taskKey = _taskKey;
+END//
+
 -- select task type by id
 CREATE OR REPLACE PROCEDURE TaskManager.Select_TaskTypeById(IN _id INT)
 BEGIN

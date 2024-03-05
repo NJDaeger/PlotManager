@@ -28,6 +28,8 @@ public interface ITaskService extends ITransactionalService, ICached {
      */
     CompletableFuture<Result<Task>> getTaskById(int taskId);
 
+    CompletableFuture<Result<Task>> getTaskByTaskKey(Project project, TaskType taskType, int taskKey);
+
     /**
      * Gets all tasks in the given project.
      * @param project The project to get the tasks from.
@@ -124,6 +126,6 @@ public interface ITaskService extends ITransactionalService, ICached {
      */
     CompletableFuture<Result<Task>> removeTaskAttributes(UUID removedBy, int taskId, int... taskAttributeIds);
 
-
+    CompletableFuture<Result<Task>> updateTaskAttribute(UUID updatedBy, int taskId, int taskAttributeId, String newValue);
 
 }

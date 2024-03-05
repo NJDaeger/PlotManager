@@ -105,6 +105,8 @@ public interface IProcedure {
 
     Pair<String, Map<String, Object>> selectTasksByProjectAndType(int projectId, int taskTypeId);
 
+    Pair<String, Map<String, Object>> selectTaskByProjectAndTypeAndKey(int projectId, int taskTypeId, int taskKey);
+
     Pair<String, Map<String, Object>> insertTask(int createdBy, int taskTypeId, int projectId, Integer parentId);
 
     Pair<String, Map<String, Object>> updateTask(int modifiedBy, int taskId, Integer parentId);

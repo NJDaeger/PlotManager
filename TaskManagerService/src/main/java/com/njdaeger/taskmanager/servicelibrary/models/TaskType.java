@@ -30,4 +30,10 @@ public class TaskType {
         return taskTypeVersion;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (!(obj instanceof TaskType other)) return false;
+        return other.taskTypeId == taskTypeId;
+    }
 }

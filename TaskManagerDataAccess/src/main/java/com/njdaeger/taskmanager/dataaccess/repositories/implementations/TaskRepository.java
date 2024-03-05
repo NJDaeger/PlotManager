@@ -56,6 +56,19 @@ public class TaskRepository implements ITaskRepository {
     }
 
     @Override
+    public CompletableFuture<TaskEntity> getTaskByTaskKey(int projectId, int taskTypeId, int taskKey) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                var proc = procedures.selectTaskByProjectAndTypeAndKey(projectId, taskTypeId, taskKey);
+                return transaction.queryScalar(proc.getFirst(), proc.getSecond(), TaskEntity.class);
+            } catch (Exception e) {
+                logger.exception(e);
+                return null;
+            }
+        });
+    }
+
+    @Override
     public CompletableFuture<List<TaskEntity>> getTasksOfProject(int projectId) {
         return CompletableFuture.supplyAsync(() -> {
             try {

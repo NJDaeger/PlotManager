@@ -267,6 +267,15 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
+    public Pair<String, Map<String, Object>> selectTaskByProjectAndTypeAndKey(int projectId, int taskTypeId, int taskKey) {
+        return Pair.of("call TaskManager.Select_TaskByProjectAndTypeAndKey(?, ?, ?)", Map.of(
+                "1", projectId,
+                "2", taskTypeId,
+                "3", taskKey
+        ));
+    }
+
+    @Override
     public Pair<String, Map<String, Object>> insertTask(int createdBy, int taskTypeId, int projectId, Integer parentId) {
         return Pair.of("call TaskManager.Insert_Task(?, ?, ?, ?)", Map.of(
                 "1", createdBy,
@@ -330,10 +339,10 @@ public class MySqlProcedures implements IProcedure {
     }
 
     @Override
-    public Pair<String, Map<String, Object>> updateTaskAttribute(int modifiedBy, int taskId, String value) {
+    public Pair<String, Map<String, Object>> updateTaskAttribute(int modifiedBy, int taskAttributeId, String value) {
         return Pair.of("call TaskManager.Update_TaskAttribute(?, ?, ?)", Map.of(
                 "1", modifiedBy,
-                "2", taskId,
+                "2", taskAttributeId,
                 "3", value
         ));
     }

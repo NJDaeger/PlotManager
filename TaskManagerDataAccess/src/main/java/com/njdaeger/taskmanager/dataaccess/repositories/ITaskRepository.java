@@ -28,6 +28,15 @@ public interface ITaskRepository extends IRepository {
     CompletableFuture<TaskEntity> getTaskById(int taskId);
 
     /**
+     * Get a task by its task key
+     * @param projectId The project the task is in
+     * @param taskTypeId The type of the task
+     * @param taskKey The key of the task
+     * @return The task
+     */
+    CompletableFuture<TaskEntity> getTaskByTaskKey(int projectId, int taskTypeId, int taskKey);
+
+    /**
      * Get all tasks of a project
      * @param projectId The id of the project
      * @return A list of tasks

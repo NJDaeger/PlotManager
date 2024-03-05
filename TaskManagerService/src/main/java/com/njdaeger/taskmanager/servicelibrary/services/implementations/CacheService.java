@@ -44,24 +44,4 @@ public class CacheService implements ICacheService {
     public Map<String, Project> getProjectCache() {
         return projectCache;
     }
-
-//    @Override
-//    public Map<UUID, World> getWorldCache() {
-//        return worldCache;
-//    }
-//
-//    @Override
-//    public Map<String, PlotGroup> getGroupCache() {
-//        return groupCache;
-//    }
-//
-//    @Override
-//    public Map<Integer, Plot> getPlotCache() {
-//        return plotCache;
-//    }
-//
-//    @Override
-//    public Map<UUID, PlotBuilder> getPlotBuilderCache() {
-//        return builderCache;
-//    }
 }
